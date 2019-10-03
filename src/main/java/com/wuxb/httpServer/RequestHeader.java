@@ -8,7 +8,7 @@ public class RequestHeader {
 
 	private String cookie;
 	private String contenttype;
-	private Integer contentlength;
+	private int contentlength = 0;
 	private String host;
 	private Map<String, Object> otherHeaderMap = new HashMap<String, Object>();
 	
@@ -45,7 +45,7 @@ public class RequestHeader {
 		return contenttype;
 	}
 
-	public Integer getContentLength() {
+	public int getContentLength() {
 		return contentlength;
 	}
 

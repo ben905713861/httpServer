@@ -185,14 +185,12 @@ public class HttpHandler implements Runnable {
 			bos.write(("HTTP/1.1 "+ code +" "+ status +"\r\n").getBytes());
 			//写入响应头
 			temp = responseHeader.toString().getBytes();
-			System.out.println(new String(temp));
 			bos.write(temp);
 			//写入分割线
 			bos.write(13);
 			bos.write(10);
 			//写入响应体
 			temp = responseBody.getBodyByte();
-			System.out.println(new String(temp));
 			bos.write(temp);
 		} catch (Exception e) {
 			e.printStackTrace();
