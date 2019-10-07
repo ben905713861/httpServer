@@ -8,7 +8,7 @@ public class RequestHeader {
 
 	private String cookie;
 	private String contenttype;
-	private int contentlength = 0;
+	private long contentlength = 0;
 	private String host;
 	private Map<String, Object> otherHeaderMap = new HashMap<String, Object>();
 	
@@ -28,9 +28,9 @@ public class RequestHeader {
 			try {
 				Field field = this.getClass().getDeclaredField(key);
 				field.setAccessible(true);
-				field.set(this, is_number ? Integer.parseInt(value) : value);
+				field.set(this, is_number ? Long.parseLong(value) : value);
 			} catch(NoSuchFieldException e) {
-				otherHeaderMap.put(key, is_number ? Integer.parseInt(value) : value);
+				otherHeaderMap.put(key, is_number ? Long.parseLong(value) : value);
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
 			}
@@ -45,7 +45,7 @@ public class RequestHeader {
 		return contenttype;
 	}
 
-	public int getContentLength() {
+	public long getContentLength() {
 		return contentlength;
 	}
 

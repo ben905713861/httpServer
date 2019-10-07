@@ -9,8 +9,8 @@ public class Premission implements Interceptor {
 
 	@Override
 	public void run(HttpServletRequest httpServletRequest)  throws Exception {
-		checkLogin();
-		checkPremission();
+//		checkLogin();
+//		checkPremission();
 	}
 	
 	private void checkLogin() throws UnauthorizedException {

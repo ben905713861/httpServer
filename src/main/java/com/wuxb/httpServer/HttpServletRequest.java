@@ -26,8 +26,10 @@ public class HttpServletRequest {
 		} else {
 			String[] urlTemp = url.split("\\?");
 			path = urlTemp[0];
-			queryString = urlTemp[1];
-			queryParams = HttpUrlParams.urldecode(queryString);
+			if(urlTemp.length  > 1) {
+				queryString = urlTemp[1];
+				queryParams = HttpUrlParams.urldecode(queryString);
+			}
 		}
 		this.requestHeader = requestHeader;
 		this.cookie = cookie;

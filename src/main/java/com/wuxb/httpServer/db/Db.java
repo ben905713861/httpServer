@@ -197,9 +197,15 @@ public class Db {
 		limit_sql = " LIMIT "+ limit;
 		return this;
 	}
+	public Db limit(long offset, long limit) {
+		return limit((int) offset, (int) limit);
+	}
 	public Db limit(int offset, int limit) {
 		limit_sql = " LIMIT "+ offset +","+ limit;
 		return this;
+	}
+	public Db page(long page, long limit) {
+		return page((int) page, (int) limit);
 	}
 	public Db page(int page, int limit) {
 		if(page < 1) {

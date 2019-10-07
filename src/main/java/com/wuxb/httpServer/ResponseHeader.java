@@ -37,7 +37,7 @@ public class ResponseHeader {
 	@Override
 	public String toString() {
 		String headerString = "";
-		headerString += "Content-Type: "+ contenttype + "\r\n";
+		headerString += "Content-Type: "+ (contenttype==null ? "text/plain;charset=utf-8" : contenttype ) + "\r\n";
 		headerString += "Content-Length: "+ contentlength + "\r\n";
 		if(cookie != null) {
 			List<String> setCookieList = cookie.getRespCookies();

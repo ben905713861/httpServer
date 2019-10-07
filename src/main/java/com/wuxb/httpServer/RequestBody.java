@@ -22,10 +22,10 @@ public class RequestBody {
 		if(contentType == null) {
 			return;
 		}
-		else if(contentType.equals("application/json")) {
+		else if(contentType.indexOf("application/json") != -1) {
 			bodyMap = JSONObject.parseObject(new String(bodyBytes));
 		}
-		else if(contentType.equals("application/x-www-form-urlencoded")) {
+		else if(contentType.indexOf("application/x-www-form-urlencoded") != -1) {
 			bodyMap = HttpUrlParams.urldecode(new String(bodyBytes));
 		}
 		else if(contentType.indexOf("multipart/form-data") != -1) {

@@ -8,7 +8,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Map;
 
+import com.wuxb.httpServer.annotation.GetParam;
+import com.wuxb.httpServer.annotation.PostParam;
 import com.wuxb.httpServer.exception.ForbiddenException;
 import com.wuxb.httpServer.exception.NotFoundException;
 import com.wuxb.httpServer.exception.ReqMethodNotAllowedException;
@@ -102,7 +105,7 @@ public class HttpHandler implements Runnable {
 		//session
 		session = new Session(cookie);
 		//请求体
-		int bodySize = requestHeader.getContentLength();
+		long bodySize = requestHeader.getContentLength();
 		if(bodySize > maxBodySize) {
 			throw new ReqTooLargeException("请求内容过大");
 		}
@@ -136,8 +139,8 @@ public class HttpHandler implements Runnable {
 		return headerStr;
 	}
 	
-	private byte[] readBody(Integer length) throws IOException {
-		if(length == null || length == 0) {
+	private byte[] readBody(long length) throws IOException {
+		if(length == 0) {
 			return new byte[0];
 		}
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -175,11 +178,11 @@ public class HttpHandler implements Runnable {
 			//响应体
 			if(responseBody == null) {
 				responseBody = new ResponseBody();
-				if(message != null) {
-					temp = message.getBytes();
-					responseBody.setBodyByte(temp);
-					responseHeader.setContentLength(temp.length);
-				}
+			}
+			if(message != null && !message.isEmpty()) {
+				temp = message.getBytes();
+				responseBody.setBodyByte(temp);
+				responseHeader.setContentLength(temp.length);
 			}
 			//基本信息
 			bos.write(("HTTP/1.1 "+ code +" "+ status +"\r\n").getBytes());
@@ -191,7 +194,9 @@ public class HttpHandler implements Runnable {
 			bos.write(10);
 			//写入响应体
 			temp = responseBody.getBodyByte();
-			bos.write(temp);
+			if(temp != null) {
+				bos.write(temp);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -205,9 +210,10 @@ public class HttpHandler implements Runnable {
 	
 	private void getRespData() throws Exception {
 		// 根据路由执行
-		RouteParams routeParams = Route.getRouteMap().get(httpServletRequest.getPath());
+		String path =  httpServletRequest.getPath();
+		RouteParams routeParams = Route.getRouteMap().get(path);
 		if(routeParams == null) {
-			throw new NotFoundException("路由不存在");
+			throw new NotFoundException(path +"路由不存在");
 		}
 		//请求方法检查
 		if(!routeParams.getRequestMethod().equals(RequestMethod.ALL) && !routeParams.getRequestMethod().toString().equals(httpServletRequest.getRequestMethod())) {
@@ -219,16 +225,32 @@ public class HttpHandler implements Runnable {
 		Object[] paramsObjects = new Object[parameters.length]; //需要传入控制器方法中的参数
 		for(int i = 0; i < parameters.length; i++) {
 			Class<?> type = parameters[i].getType();
-			if(type.equals(HttpServletRequest.class)) {
+			if(type.equals(Map.class)) {
+				if(parameters[i].isAnnotationPresent(PostParam.class)) {
+					paramsObjects[i] = httpServletRequest.getBody().getBodyMap();
+				} else if(parameters[i].isAnnotationPresent(GetParam.class)) {
+					paramsObjects[i] = httpServletRequest.getQueryParams();
+				} else {
+					paramsObjects[i] = null;
+				}
+			}
+			else if(type.equals(HttpServletRequest.class)) {
 				paramsObjects[i] = httpServletRequest;
 			}
 			else if(type.equals(HttpServletResponse.class)) {
 				paramsObjects[i] = httpServletResponse;
+			} else {
+				paramsObjects[i] = null;
 			}
 		}
-		Object bodyObject = method.invoke(clazz.getDeclaredConstructor().newInstance(), paramsObjects);
-		if(bodyObject != null) {
-			httpServletResponse.setResponse(bodyObject);
+		try {
+			Object bodyObject = method.invoke(clazz.getDeclaredConstructor().newInstance(), paramsObjects);
+			if(bodyObject != null) {
+				httpServletResponse.setResponse(bodyObject);
+			}
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+			throw (Exception) e.getCause();
 		}
 	}
 	

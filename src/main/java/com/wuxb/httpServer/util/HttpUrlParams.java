@@ -140,10 +140,11 @@ public class HttpUrlParams {
 				e.printStackTrace();
 			}
 		}
-		//遍历每一行传�?
+		//遍历每一行传参
 		for(Map.Entry<String, String> entry : key2value.entrySet()) {
 			String keyStr = entry.getKey();
 			String value = entry.getValue();
+			boolean value_is_number = Pattern.matches("^[1-9]{1}[0-9]{0,}$", value);
 			//根目录的key
 			Matcher keyMatcher = Pattern.compile("^[a-zA-Z\\_]{1}[\\w]*").matcher(keyStr);
 			if(!keyMatcher.find()) {
@@ -157,7 +158,7 @@ public class HttpUrlParams {
 			//二级以及二级目录以上的key
 			String pattern = "\\[([\\w]+?)\\]";
 			Matcher filterMatcher = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE).matcher(keyStr);
-			//获取�?有的patternKey
+			//获取所有的patternKey
 			List<String> patternKeyList = new ArrayList<String>();
 			while(filterMatcher.find()) {
 				String patternKey = filterMatcher.group(1);
@@ -165,16 +166,16 @@ public class HttpUrlParams {
 			}
 			//有子元素
 			if(!patternKeyList.isEmpty()) {
-				//遍历并写�?
+				//遍历并写入
 				Object childMap = map.get(key);
 				int patternKeyListSize = patternKeyList.size();
 				for(int j = 0; j < patternKeyListSize; j++) {
 					String patternKey = patternKeyList.get(j);
 					Map<String, Object> _childMap = (HashMap<String, Object>) childMap;
 					if(!_childMap.containsKey(patternKey)) {
-						//是否是最后一个节点，是的话直接赋�?
+						//是否是最后一个节点，是的话直接赋值
 						if(j == patternKeyListSize-1) {
-							_childMap.put(patternKey, value);
+							_childMap.put(patternKey, value_is_number ? Long.parseLong(value) : value);
 							break;
 						}
 						_childMap.put(patternKey, new HashMap<String, Object>());
@@ -182,9 +183,9 @@ public class HttpUrlParams {
 					childMap = _childMap.get(patternKey);
 				}
 			}
-			//只有�?级元�?
+			//只有一级元素
 			else {
-				map.put(key, value);
+				map.put(key, value_is_number ? Long.parseLong(value) : value);
 			}
 		}
 		map = (Map<String, Object>) map2list(map);
