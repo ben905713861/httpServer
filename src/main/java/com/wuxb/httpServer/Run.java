@@ -10,7 +10,7 @@ public class Run {
 	private static final int port = Integer.parseInt(Config.get("server.port"));
 	
 	public static void main(String[] args) {
-		System.out.println("======= httpServer2.0 start =======");
+		System.out.println("======= httpServer2.0 start on port "+ port +" =======");
 		try {
 			Class.forName(Route.class.getName());
 System.out.println(Route.getRouteMap().keySet());
