@@ -16,7 +16,7 @@ public class HttpServletRequest {
 	private Session session;
 	private RequestBody requestBody;
 	
-	public HttpServletRequest(String baseInfoStr, RequestHeader requestHeader, RequestBody requestBody, Cookie cookie, Session session) throws Exception {
+	public HttpServletRequest(String baseInfoStr, RequestHeader requestHeader, RequestBody requestBody, Cookie cookie, Session session) {
 		//基本信息
 		String[] baseInfo = baseInfoStr.split(" ");
 		requestMethod = baseInfo[0].toUpperCase();
@@ -35,8 +35,6 @@ public class HttpServletRequest {
 		this.cookie = cookie;
 		this.session = session;
 		this.requestBody = requestBody;
-		//拦截器
-		InterceptLoader.run(this);
 	}
 	
 	public String getRequestMethod() {

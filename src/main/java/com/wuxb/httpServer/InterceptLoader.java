@@ -21,7 +21,7 @@ public class InterceptLoader {
 			}
 			if(interfaces[0] == Interceptor.class) {
 				try {
-					Method method = clazz.getDeclaredMethod("run", HttpServletRequest.class);
+					Method method = clazz.getDeclaredMethod("run", HttpServletRequest.class, HttpServletResponse.class);
 					claszz2methodList.put(clazz, method);
 				} catch (NoSuchMethodException | SecurityException e) {
 					e.printStackTrace();
@@ -30,13 +30,13 @@ public class InterceptLoader {
 		}
 	}
 	
-	public static void run(HttpServletRequest httpServletRequest) throws Exception {
+	public static void run(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws Exception {
 		for(Entry<Class<?>, Method> entry : claszz2methodList.entrySet()) {
 			Class<?> clazz = entry.getKey();
 			Method method = entry.getValue();
 			Object newObject = clazz.getDeclaredConstructor().newInstance();
 			try {
-				method.invoke(newObject, httpServletRequest);
+				method.invoke(newObject, httpServletRequest, httpServletResponse);
 			} catch (InvocationTargetException e) {
 				throw (Exception) e.getCause();
 			}

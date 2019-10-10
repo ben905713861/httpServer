@@ -38,7 +38,9 @@ public class ResponseHeader {
 	public String toString() {
 		String headerString = "";
 		headerString += "Content-Type: "+ (contenttype==null ? "text/plain;charset=utf-8" : contenttype ) + "\r\n";
-		headerString += "Content-Length: "+ contentlength + "\r\n";
+		if(contentlength > 0) {
+			headerString += "Content-Length: "+ contentlength + "\r\n";
+		}
 		if(cookie != null) {
 			List<String> setCookieList = cookie.getRespCookies();
 			for(String setCookieStr : setCookieList) {

@@ -9,10 +9,12 @@ import java.lang.reflect.Parameter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 import com.wuxb.httpServer.annotation.GetParam;
 import com.wuxb.httpServer.annotation.PostParam;
 import com.wuxb.httpServer.exception.ForbiddenException;
+import com.wuxb.httpServer.exception.InterceptInterruptException;
 import com.wuxb.httpServer.exception.NotFoundException;
 import com.wuxb.httpServer.exception.ReqMethodNotAllowedException;
 import com.wuxb.httpServer.exception.ReqTooLargeException;
@@ -42,7 +44,7 @@ public class HttpHandler implements Runnable {
 		try {
 			bis = new BufferedInputStream(client.getInputStream());
 			bos = new BufferedOutputStream(client.getOutputStream());
-//			client.setKeepAlive(true);
+			client.setKeepAlive(true);
 			client.setSoTimeout(httpTimeout);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -55,7 +57,13 @@ public class HttpHandler implements Runnable {
 		try {
 			initServletRequest();
 			initServletResponse();
+			//拦截器
+			InterceptLoader.run(httpServletRequest, httpServletResponse);
+			//获取控制器的返回数据
 			getRespData();
+			response(200, "OK", null);
+		} catch (InterceptInterruptException e) {
+			//拦截器中断
 			response(200, "OK", null);
 		} catch (UnauthorizedException e) {
 			response(401, "Unauthorized", e.getMessage());
@@ -93,7 +101,7 @@ public class HttpHandler implements Runnable {
 		}
 	}
 	
-	private void initServletRequest() throws Exception {
+	private void initServletRequest() throws IOException, ReqTooLargeException   {
 		//请求头源码
 		String headerStr = readHeader();
 		int rowOneIndex = headerStr.indexOf("\r\n");//请求头第一行位置
@@ -169,7 +177,7 @@ public class HttpHandler implements Runnable {
 	
 	private void response(int code, String status, String message) {
 		try {
-			byte[] temp;
+			byte[] bodyByte;
 			//响应头
 			if(responseHeader == null) {
 				responseHeader = new ResponseHeader(cookie);
@@ -180,22 +188,35 @@ public class HttpHandler implements Runnable {
 				responseBody = new ResponseBody();
 			}
 			if(message != null && !message.isEmpty()) {
-				temp = message.getBytes();
-				responseBody.setBodyByte(temp);
-				responseHeader.setContentLength(temp.length);
+				bodyByte = message.getBytes();
+				responseBody.setBodyByte(bodyByte);
+				responseHeader.setContentLength(bodyByte.length);
+			} else {
+//				bodyByte = responseBody.getBodyByte();
+//				if(bodyByte.length > 10240) {
+//					System.out.println("原" + bodyByte.length);
+//					responseHeader.setContentLength(0);
+//					responseHeader.set("Content-Encoding", "gzip");
+//					responseHeader.set("Transfer-Encoding", "chunked");
+//					responseHeader.set("Vary", "Accept-Encoding");
+//					ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//					GZIPOutputStream gzipOutputStream = new GZIPOutputStream(baos);
+//					gzipOutputStream.write(bodyByte);
+//					gzipOutputStream.finish();
+//					bodyByte = baos.toByteArray();
+//					System.out.println("压缩" + bodyByte.length);
+//				}
 			}
 			//基本信息
 			bos.write(("HTTP/1.1 "+ code +" "+ status +"\r\n").getBytes());
 			//写入响应头
-			temp = responseHeader.toString().getBytes();
-			bos.write(temp);
+			bos.write(responseHeader.toString().getBytes("UTF-8"));
 			//写入分割线
 			bos.write(13);
 			bos.write(10);
 			//写入响应体
-			temp = responseBody.getBodyByte();
-			if(temp != null) {
-				bos.write(temp);
+			if(bodyByte != null) {
+				bos.write(bodyByte);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
