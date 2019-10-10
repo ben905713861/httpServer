@@ -8,6 +8,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
@@ -28,6 +30,7 @@ public class HttpHandler implements Runnable {
 	
 	private static final int httpTimeout = Integer.parseInt(Config.get("http.timeout"));
 	private static final int maxBodySize = Integer.parseInt(Config.get("http.maxBodySize"));
+	private static final List<String> gzipAllowContentTypes = Arrays.asList(new String[]{"application/json","text/html","text/css","application/x-javascript","text/plain"});
 	private Socket client;
 	private BufferedInputStream bis;
 	private HttpServletRequest httpServletRequest;
@@ -192,20 +195,24 @@ public class HttpHandler implements Runnable {
 				responseBody.setBodyByte(bodyByte);
 				responseHeader.setContentLength(bodyByte.length);
 			} else {
-//				bodyByte = responseBody.getBodyByte();
-//				if(bodyByte.length > 10240) {
-//					System.out.println("原" + bodyByte.length);
-//					responseHeader.setContentLength(0);
-//					responseHeader.set("Content-Encoding", "gzip");
-//					responseHeader.set("Transfer-Encoding", "chunked");
-//					responseHeader.set("Vary", "Accept-Encoding");
-//					ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//					GZIPOutputStream gzipOutputStream = new GZIPOutputStream(baos);
-//					gzipOutputStream.write(bodyByte);
-//					gzipOutputStream.finish();
-//					bodyByte = baos.toByteArray();
-//					System.out.println("压缩" + bodyByte.length);
-//				}
+				bodyByte = responseBody.getBodyByte();
+				//gzip压缩第一个条件，大于10k
+				if(bodyByte.length > 10240) {
+					String respContentType = responseHeader.getContentType();
+					respContentType = respContentType.substring(0, respContentType.indexOf(";"));
+					//gzip压缩第二个条件，符合指定contentType类型
+					if(gzipAllowContentTypes.contains(respContentType)) {
+						responseHeader.setContentLength(0);
+						responseHeader.set("Content-Encoding", "gzip");
+						responseHeader.set("Vary", "Accept-Encoding");
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						GZIPOutputStream gzipOutputStream = new GZIPOutputStream(baos);
+						gzipOutputStream.write(bodyByte);
+						gzipOutputStream.finish();
+						bodyByte = baos.toByteArray();
+						gzipOutputStream.close();
+					}
+				}
 			}
 			//基本信息
 			bos.write(("HTTP/1.1 "+ code +" "+ status +"\r\n").getBytes());

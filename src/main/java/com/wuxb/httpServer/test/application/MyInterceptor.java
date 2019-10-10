@@ -43,8 +43,10 @@ public class MyInterceptor implements Interceptor {
 		switch(extName) {
 			case "html":
 			case "htm":
+				respHeader.setContentType("text/html; charset=UTF-8");
+				break;
 			case "css":
-				respHeader.setContentType("text/"+ extName +"; charset=UTF-8");
+				respHeader.setContentType("text/css; charset=UTF-8");
 				break;
 			case "js":
 				respHeader.setContentType("application/x-javascript; charset=UTF-8");
@@ -65,6 +67,7 @@ public class MyInterceptor implements Interceptor {
 				respHeader.setContentType("application/octet-stream");
 				break;
 			}
+		respHeader.set("Cache-Control", "max-age=10");
 		throw new InterceptInterruptException();
 	}
 	

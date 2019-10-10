@@ -25,6 +25,10 @@ public class ResponseHeader {
 			this.contenttype = contenttype;
 		}
 	}
+	
+	public String getContentType() {
+		return contenttype;
+	}
 
 	public void setContentLength(int contentlength) {
 		this.contentlength = contentlength;
