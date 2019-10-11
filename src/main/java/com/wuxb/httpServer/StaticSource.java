@@ -3,23 +3,25 @@ package com.wuxb.httpServer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
 import com.wuxb.httpServer.exception.HttpInterceptInterrupt;
 import com.wuxb.httpServer.exception.HttpNotModified;
 import com.wuxb.httpServer.exception.NotFoundException;
+import com.wuxb.httpServer.util.Config;
 import com.wuxb.httpServer.util.Encrypt;
 
 public class StaticSource {
 
-	private static final String PRXFIX_ROUTE = "/static";//静态资源指定路由前缀
+	private static final String PRXFIX_ROUTE = Config.get("http.staticSource.path");//静态资源指定路由前缀,相对/resources/的存放路径
+	private static final int CACHE_TIME = Integer.parseInt(Config.get("http.staticSource.cacheTime"));//静态资源指定路由前缀,相对/resources/的存放路径
 	private String path;
 	private RequestHeader requestHeader;
 	private ResponseHeader responseHeader;
 	private ResponseBody responseBody;
-	private static Map<String, SourceInfo> routeMap = new HashMap<String, StaticSource.SourceInfo>();
+	private static Map<String, SourceInfo> routeMap = new Hashtable<String, StaticSource.SourceInfo>();
 	private SourceInfo sourceInfo;
 	
 	private class SourceInfo {
@@ -46,7 +48,7 @@ public class StaticSource {
 		//body
 		setRespBody(extName);
 		//浏览器缓存
-		responseHeader.set("Cache-Control", "max-age=10");
+		responseHeader.set("Cache-Control", "max-age="+ CACHE_TIME);
 		throw new HttpInterceptInterrupt();
 	}
 	
