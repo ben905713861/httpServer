@@ -17,16 +17,17 @@ public class RequestHeader {
 		String[] keyValueArray = headerStr.split("\r\n");
 		for(String keyValue : keyValueArray) {
 			String[] temp = keyValue.split(":");
-			String key = temp[0].trim().replace("-", "").toLowerCase();
+			String key = temp[0].trim();
+			String _key = key.replace("-", "").toLowerCase();
 			String value = temp[1].trim();
-			if(key.equals("otherHeaderMap")) {
+			if(key.equals("otherHeaderMap") || _key.equals("otherHdeaderMap")) {
 				continue;
 			}
 			//是整数数字
 			boolean is_number = value.matches("^0|(\\-?[1-9]{1}[0-9]*)$");
 			//赋值
 			try {
-				Field field = this.getClass().getDeclaredField(key);
+				Field field = this.getClass().getDeclaredField(_key);
 				field.setAccessible(true);
 				field.set(this, is_number ? Long.parseLong(value) : value);
 			} catch(NoSuchFieldException e) {

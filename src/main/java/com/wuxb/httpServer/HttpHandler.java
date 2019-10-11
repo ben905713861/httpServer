@@ -8,15 +8,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
-import java.util.zip.GZIPOutputStream;
 
 import com.wuxb.httpServer.annotation.GetParam;
 import com.wuxb.httpServer.annotation.PostParam;
 import com.wuxb.httpServer.exception.ForbiddenException;
-import com.wuxb.httpServer.exception.InterceptInterruptException;
+import com.wuxb.httpServer.exception.HttpInterceptInterrupt;
+import com.wuxb.httpServer.exception.HttpNotModified;
 import com.wuxb.httpServer.exception.NotFoundException;
 import com.wuxb.httpServer.exception.ReqMethodNotAllowedException;
 import com.wuxb.httpServer.exception.ReqTooLargeException;
@@ -30,7 +28,6 @@ public class HttpHandler implements Runnable {
 	
 	private static final int httpTimeout = Integer.parseInt(Config.get("http.timeout"));
 	private static final int maxBodySize = Integer.parseInt(Config.get("http.maxBodySize"));
-	private static final List<String> gzipAllowContentTypes = Arrays.asList(new String[]{"application/json","text/html","text/css","application/x-javascript","text/plain"});
 	private Socket client;
 	private BufferedInputStream bis;
 	private HttpServletRequest httpServletRequest;
@@ -65,21 +62,24 @@ public class HttpHandler implements Runnable {
 			//获取控制器的返回数据
 			getRespData();
 			response(200, "OK", null);
-		} catch (InterceptInterruptException e) {
-			//拦截器中断
+		} catch (HttpInterceptInterrupt e) {
+			//拦截器200中断
 			response(200, "OK", null);
+		} catch (HttpNotModified e) {
+			//拦截器304中断
+			response(304, "Not Modified", null);
 		} catch (UnauthorizedException e) {
 			response(401, "Unauthorized", e.getMessage());
-			e.printStackTrace();
+			System.err.println(e.getMessage());
 		} catch (ForbiddenException e) {
 			response(403, "Forbidden", e.getMessage());
-			e.printStackTrace();
+			System.err.println(e.getMessage());
 		} catch (NotFoundException e) {
 			response(404, "Not Found", e.getMessage());
-			e.printStackTrace();
+			System.err.println(e.getMessage());
 		} catch (ReqMethodNotAllowedException e) {
 			response(405, "Method Not Allowed", e.getMessage());
-			e.printStackTrace();
+			System.err.println(e.getMessage());
 		} catch (SocketTimeoutException e) {
 			response(408, "Request Timeout", e.getMessage());
 			e.printStackTrace();
@@ -96,11 +96,7 @@ public class HttpHandler implements Runnable {
 			response(500, "Internal Server Error", e.getMessage());
 			e.printStackTrace();
 		} finally {
-			try {
-				close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			close();
 		}
 	}
 	
@@ -196,23 +192,6 @@ public class HttpHandler implements Runnable {
 				responseHeader.setContentLength(bodyByte.length);
 			} else {
 				bodyByte = responseBody.getBodyByte();
-				//gzip压缩第一个条件，大于10k
-				if(bodyByte.length > 10240) {
-					String respContentType = responseHeader.getContentType();
-					respContentType = respContentType.substring(0, respContentType.indexOf(";"));
-					//gzip压缩第二个条件，符合指定contentType类型
-					if(gzipAllowContentTypes.contains(respContentType)) {
-						responseHeader.setContentLength(0);
-						responseHeader.set("Content-Encoding", "gzip");
-						responseHeader.set("Vary", "Accept-Encoding");
-						ByteArrayOutputStream baos = new ByteArrayOutputStream();
-						GZIPOutputStream gzipOutputStream = new GZIPOutputStream(baos);
-						gzipOutputStream.write(bodyByte);
-						gzipOutputStream.finish();
-						bodyByte = baos.toByteArray();
-						gzipOutputStream.close();
-					}
-				}
 			}
 			//基本信息
 			bos.write(("HTTP/1.1 "+ code +" "+ status +"\r\n").getBytes());
@@ -241,7 +220,7 @@ public class HttpHandler implements Runnable {
 		String path =  httpServletRequest.getPath();
 		RouteParams routeParams = Route.getRouteMap().get(path);
 		if(routeParams == null) {
-			throw new NotFoundException(path +"路由不存在");
+			throw new NotFoundException(path +" 路由不存在");
 		}
 		//请求方法检查
 		if(!routeParams.getRequestMethod().equals(RequestMethod.ALL) && !routeParams.getRequestMethod().toString().equals(httpServletRequest.getRequestMethod())) {
@@ -282,10 +261,22 @@ public class HttpHandler implements Runnable {
 		}
 	}
 	
-	private void close() throws IOException {
-		if(bos != null) bos.close();
-		if(bis != null) bis.close();
-		client.close();
+	private void close() {
+		try {
+			if(bos != null) bos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		try {
+			if(bis != null) bis.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		try {
+			client.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }
