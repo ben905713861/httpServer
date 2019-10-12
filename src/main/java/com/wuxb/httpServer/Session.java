@@ -47,4 +47,9 @@ public class Session {
 		Cache.set(serverBeforeKeyName+sessionId, sessionJsonObject.toString(), sessionAge);
 	}
 	
+	public void destory() {
+		sessionJsonObject.clear();
+		Cache.delete(serverBeforeKeyName+sessionId);
+	}
+	
 }

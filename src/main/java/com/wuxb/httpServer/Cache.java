@@ -23,4 +23,10 @@ public class Cache {
 		jedis.close();
 	}
 	
+	public static void delete(String key) {
+		Jedis jedis = Redis.getConn();
+		jedis.del(key);
+		jedis.close();
+	}
+	
 }

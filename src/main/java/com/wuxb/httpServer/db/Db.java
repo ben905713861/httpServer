@@ -376,7 +376,6 @@ public class Db {
 	}
 	
 	public static List<Map<String, Object>> query(String sql,List<Object> bindList) throws SQLException {
-		System.err.println(sql);
 		Connection connection = null;
 		try {
 			connection = ConnectionPool.getConnection();

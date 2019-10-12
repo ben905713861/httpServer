@@ -6,6 +6,7 @@ import java.util.Map;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.wuxb.httpServer.exception.RespTypeNotAllowedException;
 
 public class HttpServletResponse {
@@ -35,9 +36,7 @@ public class HttpServletResponse {
 				bodyText = bodyObject.toString();
 				contentType = "text/plain; charset=utf-8";
 			} else if(bodyObject instanceof Map) {
-				@SuppressWarnings("unchecked")
-				JSON json = new JSONObject((Map<String, Object>) bodyObject);
-				bodyText = json.toString();
+				bodyText = JSONObject.toJSONString(bodyObject, SerializerFeature.WriteMapNullValue);
 				contentType = "application/json; charset=utf-8";
 			} else if(bodyObject instanceof List) {
 				@SuppressWarnings("unchecked")
