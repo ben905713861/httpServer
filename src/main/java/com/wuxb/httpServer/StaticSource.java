@@ -7,22 +7,37 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
+import com.wuxb.httpServer.exception.HttpErrorException;
 import com.wuxb.httpServer.exception.HttpInterceptInterrupt;
-import com.wuxb.httpServer.exception.HttpNotModified;
-import com.wuxb.httpServer.exception.NotFoundException;
 import com.wuxb.httpServer.util.Config;
 import com.wuxb.httpServer.util.Encrypt;
 
 public class StaticSource {
 
-	private static final String PRXFIX_ROUTE = Config.get("http.staticSource.path");//静态资源指定路由前缀,相对/resources/的存放路径
-	private static final int CACHE_TIME = Integer.parseInt(Config.get("http.staticSource.cacheTime"));//静态资源指定路由前缀,相对/resources/的存放路径
+	private static final String PRXFIX_PATH;//静态资源指定路由前缀,相对/resources/的存放路径
+	private static final int CACHE_TIME;//静态资源指定路由前缀,相对/resources/的存放路径
 	private String path;
 	private RequestHeader requestHeader;
+	private HttpServletResponse httpServletResponse;
 	private ResponseHeader responseHeader;
 	private ResponseBody responseBody;
 	private static Map<String, SourceInfo> routeMap = new Hashtable<String, StaticSource.SourceInfo>();
 	private SourceInfo sourceInfo;
+	
+	static {
+		String path = Config.get("http.staticSource.path");
+		if(path == null || path.isEmpty()) {
+			PRXFIX_PATH = "static";
+		} else {
+			PRXFIX_PATH = path;
+		}
+		String cacheTime = Config.get("http.staticSource.cacheTime");
+		if(cacheTime == null || cacheTime.isEmpty()) {
+			CACHE_TIME = 172800;
+		} else {
+			CACHE_TIME = Integer.parseInt(cacheTime);
+		}
+	}
 	
 	private class SourceInfo {
 		public String etag;
@@ -35,10 +50,11 @@ public class StaticSource {
 		requestHeader = httpServletRequest.getHeader();
 		responseHeader = httpServletResponse.getHeader();
 		responseBody = httpServletResponse.getBody();
+		this.httpServletResponse = httpServletResponse;
 	}
 	
-	public void action() throws NotFoundException, IOException, HttpNotModified, HttpInterceptInterrupt {
-		if(path.indexOf(PRXFIX_ROUTE) != 0) {
+	public void action() throws IOException, HttpInterceptInterrupt, HttpErrorException {
+		if(path.indexOf(PRXFIX_PATH) != 0) {
 			return;
 		}
 		//扩展名
@@ -49,6 +65,7 @@ public class StaticSource {
 		setRespBody(extName);
 		//浏览器缓存
 		responseHeader.set("Cache-Control", "max-age="+ CACHE_TIME);
+		httpServletResponse.setResponseCode(200);
 		throw new HttpInterceptInterrupt();
 	}
 	
@@ -87,14 +104,15 @@ public class StaticSource {
 		responseHeader.setContentType(contentType);
 	}
 	
-	private void setRespBody(String extName) throws NotFoundException, IOException, HttpNotModified {
+	private void setRespBody(String extName) throws IOException, HttpErrorException, HttpInterceptInterrupt {
 		if(routeMap.containsKey(path)) {
 			useCache();
 			return;
 		}
 		InputStream is = ClassLoader.getSystemResourceAsStream(path.substring(1));
 		if(is == null) {
-			throw new NotFoundException(path +"，资源不存在");
+			httpServletResponse.setResponseCode(404);
+			throw new HttpErrorException(path +"，资源不存在");
 		}
 		sourceInfo = new SourceInfo();
 		byte[] bodyByte = is.readAllBytes();
@@ -125,7 +143,7 @@ public class StaticSource {
 		routeMap.put(path, sourceInfo);
 	}
 	
-	private void useCache() throws HttpNotModified {
+	private void useCache() throws HttpInterceptInterrupt {
 		sourceInfo = routeMap.get(path);
 		//使用304响应
 		String cacheControl = (String) requestHeader.get("Cache-Control");
@@ -134,7 +152,8 @@ public class StaticSource {
 			if(requestEtag != null && !requestEtag.isEmpty()) {
 				if(requestEtag.equals(sourceInfo.etag)) {
 					responseHeader.set("ETag", requestEtag);
-					throw new HttpNotModified();
+					httpServletResponse.setResponseCode(304);
+					throw new HttpInterceptInterrupt();
 				}
 			}
 		}

@@ -12,7 +12,7 @@ public class Config {
 	}
 
 	public static String get(String key) {
-		String value = "";
+		String value = null;
 		try {
 			value = resourceBundle.getString(key);
 		} catch (MissingResourceException e) {

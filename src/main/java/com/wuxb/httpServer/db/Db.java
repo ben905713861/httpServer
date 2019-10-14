@@ -100,7 +100,7 @@ public class Db {
 			}
 			//常规=
 			else {
-				where_sql += key +"=? AND ";
+				where_sql += " AND "+ key +"=? ";
 			}
 		}
 		bindList.addAll(whereMap.values());

@@ -76,6 +76,9 @@ public abstract class Validate {
 	}
 	
 	public boolean check(Map<String, Object> dataMap) {
+		if(dataMap == null) {
+			return false;
+		}
 		this.dataMap = dataMap;
 		for(Entry<String, String[]> row : rulesMap.entrySet()) {
 			String fieldName = row.getKey();//字段名
@@ -124,6 +127,7 @@ public abstract class Validate {
 					//在子类中查找自定义方法
 					try {
 						Method method = this.getClass().getDeclaredMethod(methodName, Object.class);
+						method.setAccessible(true);
 						Object checkRes = method.invoke(this, data);
 						if(!(boolean) checkRes) {
 							String _message = message.get(fieldName +"."+ methodName);

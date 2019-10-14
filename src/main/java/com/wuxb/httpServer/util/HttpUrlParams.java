@@ -144,7 +144,7 @@ public class HttpUrlParams {
 		for(Map.Entry<String, String> entry : key2value.entrySet()) {
 			String keyStr = entry.getKey();
 			String value = entry.getValue();
-			boolean value_is_number = Pattern.matches("^[1-9]{1}[0-9]{0,}$", value);
+			boolean value_is_number = Pattern.matches("^0|([1-9]{1}[0-9]{0,})$", value);
 			//根目录的key
 			Matcher keyMatcher = Pattern.compile("^[a-zA-Z\\_]{1}[\\w]*").matcher(keyStr);
 			if(!keyMatcher.find()) {
@@ -175,7 +175,11 @@ public class HttpUrlParams {
 					if(!_childMap.containsKey(patternKey)) {
 						//是否是最后一个节点，是的话直接赋值
 						if(j == patternKeyListSize-1) {
-							_childMap.put(patternKey, value_is_number ? Long.parseLong(value) : value);
+							if(value.isEmpty()) {
+								_childMap.put(patternKey, null);
+							} else {
+								_childMap.put(patternKey, value_is_number ? Long.parseLong(value) : value);
+							}
 							break;
 						}
 						_childMap.put(patternKey, new HashMap<String, Object>());
@@ -185,7 +189,11 @@ public class HttpUrlParams {
 			}
 			//只有一级元素
 			else {
-				map.put(key, value_is_number ? Long.parseLong(value) : value);
+				if(value.isEmpty()) {
+					map.put(key, null);
+				} else {
+					map.put(key, value_is_number ? Long.parseLong(value) : value);
+				}
 			}
 		}
 		map = (Map<String, Object>) map2list(map);

@@ -8,7 +8,7 @@ import java.util.Map.Entry;
 public class ResponseHeader {
 
 	private String contenttype;
-	private int contentlength = 0;
+	private long contentlength = 0;
 	private Cookie cookie;
 	private Map<String, Object> otherHeaderMap = new HashMap<String, Object>();
 
@@ -30,7 +30,7 @@ public class ResponseHeader {
 		return contenttype;
 	}
 
-	public void setContentLength(int contentlength) {
+	public void setContentLength(long contentlength) {
 		this.contentlength = contentlength;
 	}
 	

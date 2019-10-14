@@ -4,8 +4,6 @@ import com.wuxb.httpServer.HttpServletRequest;
 import com.wuxb.httpServer.HttpServletResponse;
 import com.wuxb.httpServer.Interceptor;
 import com.wuxb.httpServer.StaticSource;
-import com.wuxb.httpServer.exception.ForbiddenException;
-import com.wuxb.httpServer.exception.UnauthorizedException;
 
 public class MyInterceptor implements Interceptor {
 
@@ -22,12 +20,12 @@ public class MyInterceptor implements Interceptor {
 //		checkPremission();
 	}
 	
-	private void checkLogin() throws UnauthorizedException {
-		throw new UnauthorizedException("尚未登录");
-	}
-	
-	private void checkPremission() throws ForbiddenException {
-		throw new ForbiddenException("没有权限访问");
-	}
-	
+//	private void checkLogin() throws UnauthorizedException {
+//		throw new UnauthorizedException("尚未登录");
+//	}
+//	
+//	private void checkPremission() throws ForbiddenException {
+//		throw new ForbiddenException("没有权限访问");
+//	}
+//	
 }

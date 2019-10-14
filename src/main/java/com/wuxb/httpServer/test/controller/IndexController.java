@@ -9,7 +9,6 @@ import com.wuxb.httpServer.HttpServletRequest;
 import com.wuxb.httpServer.HttpServletResponse;
 import com.wuxb.httpServer.annotation.RequestMapping;
 import com.wuxb.httpServer.annotation.RestController;
-import com.wuxb.httpServer.exception.RespTypeNotAllowedException;
 import com.wuxb.httpServer.params.FileInfo;
 
 @RestController
@@ -37,7 +36,7 @@ public class IndexController {
 	}
 	
 	@RequestMapping(value="/file")
-	public void file(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, RespTypeNotAllowedException {
+	public void file(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws Exception {
 //		if(1==1)throw new IOException();
 //		System.out.println(httpServletRequest.getQueryParams());
 //		System.out.println(httpServletRequest.getBody().getBodyMap());

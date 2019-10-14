@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.Socket;
@@ -12,22 +13,18 @@ import java.util.Map;
 
 import com.wuxb.httpServer.annotation.GetParam;
 import com.wuxb.httpServer.annotation.PostParam;
-import com.wuxb.httpServer.exception.ForbiddenException;
+import com.wuxb.httpServer.exception.HttpErrorException;
 import com.wuxb.httpServer.exception.HttpInterceptInterrupt;
-import com.wuxb.httpServer.exception.HttpNotModified;
-import com.wuxb.httpServer.exception.NotFoundException;
-import com.wuxb.httpServer.exception.ReqMethodNotAllowedException;
-import com.wuxb.httpServer.exception.ReqTooLargeException;
-import com.wuxb.httpServer.exception.RespTypeNotAllowedException;
-import com.wuxb.httpServer.exception.UnauthorizedException;
+import com.wuxb.httpServer.exception.RequestFailedException;
 import com.wuxb.httpServer.params.RequestMethod;
 import com.wuxb.httpServer.params.RouteParams;
 import com.wuxb.httpServer.util.Config;
+import com.wuxb.httpServer.util.HttpContextHolder;
 
 public class HttpHandler implements Runnable {
 	
-	private static final int httpTimeout = Integer.parseInt(Config.get("http.timeout"));
-	private static final int maxBodySize = Integer.parseInt(Config.get("http.maxBodySize"));
+	private static final int HTTP_TIMEOUT;
+	private static final int MAX_BODY_SIZE;
 	private Socket client;
 	private BufferedInputStream bis;
 	private HttpServletRequest httpServletRequest;
@@ -40,12 +37,27 @@ public class HttpHandler implements Runnable {
 	private ResponseHeader responseHeader;
 	private ResponseBody responseBody;
 	
+	static {
+		String timeout = Config.get("http.timeout");
+		if(timeout == null || timeout.isEmpty()) {
+			HTTP_TIMEOUT = 5000;
+		} else {
+			HTTP_TIMEOUT = Integer.parseInt(timeout);
+		}
+		String size = Config.get("http.maxBodySize");
+		if(size == null || size.isEmpty()) {
+			MAX_BODY_SIZE = 10485760;
+		} else {
+			MAX_BODY_SIZE = Integer.parseInt(size);
+		}
+	}
+	
 	public HttpHandler(Socket client) {
 		try {
 			bis = new BufferedInputStream(client.getInputStream());
 			bos = new BufferedOutputStream(client.getOutputStream());
 			client.setKeepAlive(true);
-			client.setSoTimeout(httpTimeout);
+			client.setSoTimeout(HTTP_TIMEOUT);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -55,52 +67,35 @@ public class HttpHandler implements Runnable {
 	@Override
 	public void run() {
 		try {
-			initServletRequest();
-			initServletResponse();
+			initServlet();
+			//记录到static方法内，方便当前线程从其他地方获取
+			HttpContextHolder.set(httpServletRequest, httpServletResponse);
 			//拦截器
 			InterceptLoader.run(httpServletRequest, httpServletResponse);
 			//获取控制器的返回数据
 			getRespData();
-			response(200, "OK", null);
+			response(null);
 		} catch (HttpInterceptInterrupt e) {
-			//拦截器200中断
-			response(200, "OK", null);
-		} catch (HttpNotModified e) {
-			//拦截器304中断
-			response(304, "Not Modified", null);
-		} catch (UnauthorizedException e) {
-			response(401, "Unauthorized", e.getMessage());
+			//拦截器中断
+			response(e.getMessage());
+//			System.out.println(e.getMessage());
+		} catch (HttpErrorException e) {
+			//http本框架内错误
+			response(e.getMessage());
 			System.err.println(e.getMessage());
-		} catch (ForbiddenException e) {
-			response(403, "Forbidden", e.getMessage());
-			System.err.println(e.getMessage());
-		} catch (NotFoundException e) {
-			response(404, "Not Found", e.getMessage());
-			System.err.println(e.getMessage());
-		} catch (ReqMethodNotAllowedException e) {
-			response(405, "Method Not Allowed", e.getMessage());
-			System.err.println(e.getMessage());
-		} catch (SocketTimeoutException e) {
-			response(408, "Request Timeout", e.getMessage());
-			e.printStackTrace();
-		} catch (ReqTooLargeException e) {
-			response(413, "Request Entity Too Large", e.getMessage());
-			e.printStackTrace();
-		} catch (IOException e) {
-			response(500, "Internal Server Error", e.getMessage());
-			e.printStackTrace();
-		} catch (RespTypeNotAllowedException e) {
-			response(500, "Internal Server Error", e.getMessage());
+		} catch (RequestFailedException e) {
+			//http请求 接收数据过程致命错误
 			e.printStackTrace();
 		} catch(Exception e) {
-			response(500, "Internal Server Error", e.getMessage());
+			httpServletResponse.setResponseCode(500);
+			response(e.getMessage());
 			e.printStackTrace();
 		} finally {
 			close();
 		}
 	}
 	
-	private void initServletRequest() throws IOException, ReqTooLargeException   {
+	private void initServlet() throws HttpErrorException, IOException, RequestFailedException  {
 		//请求头源码
 		String headerStr = readHeader();
 		int rowOneIndex = headerStr.indexOf("\r\n");//请求头第一行位置
@@ -111,10 +106,17 @@ public class HttpHandler implements Runnable {
 		cookie = new Cookie(requestHeader.getCookieStr());
 		//session
 		session = new Session(cookie);
+		//响应头
+		responseHeader = new ResponseHeader(cookie);
+		//响应体
+		responseBody = new ResponseBody();
+		//servletResp响应对象
+		httpServletResponse = new HttpServletResponse(responseHeader, responseBody);
 		//请求体
 		long bodySize = requestHeader.getContentLength();
-		if(bodySize > maxBodySize) {
-			throw new ReqTooLargeException("请求内容过大");
+		if(bodySize > MAX_BODY_SIZE) {
+			httpServletResponse.setResponseCode(413);
+			throw new HttpErrorException("请求内容过大");
 		}
 		byte[] bodyBytes = readBody(bodySize);
 		requestBody = new RequestBody(requestHeader.getContentType(), bodyBytes);
@@ -122,13 +124,19 @@ public class HttpHandler implements Runnable {
 		httpServletRequest = new HttpServletRequest(baseInfoStr, requestHeader, requestBody, cookie, session);
 	}
 	
-	private String readHeader() throws IOException, SocketTimeoutException {
+	private String readHeader() throws RequestFailedException {
 		ByteArrayOutputStream tempOutputStream = new ByteArrayOutputStream();
 		//获取header
 		int[] checkTemp = new int[4];
 		int byteTemp;
 		while(true) {
-			byteTemp = bis.read();
+			try {
+				byteTemp = bis.read();
+			} catch (SocketTimeoutException e) {
+				throw new RequestFailedException("致命错误！接收请求头数据超时");
+			} catch (IOException e) {
+				throw new RequestFailedException("致命错误！IOException："+ e.getMessage());
+			}
 			checkTemp[0] = checkTemp[1];
 			checkTemp[1] = checkTemp[2];
 			checkTemp[2] = checkTemp[3];
@@ -140,13 +148,17 @@ public class HttpHandler implements Runnable {
 				break;
 			}
 		}
-		String headerStr = tempOutputStream.toString("UTF-8");
-		tempOutputStream.reset();
-		tempOutputStream.close();
-		return headerStr;
+		try {
+			String headerStr = tempOutputStream.toString("UTF-8");
+			tempOutputStream.reset();
+			tempOutputStream.close();
+			return headerStr;
+		} catch (IOException e) {
+			throw new RequestFailedException("致命错误！IOException："+ e.getMessage());
+		}
 	}
 	
-	private byte[] readBody(long length) throws IOException {
+	private byte[] readBody(long length) throws IOException, HttpErrorException {
 		if(length == 0) {
 			return new byte[0];
 		}
@@ -154,7 +166,13 @@ public class HttpHandler implements Runnable {
 		byte[] temp = new byte[4096];
 		long lenSum = 0;
 		while(true) {
-			int len = bis.read(temp);
+			int len;
+			try {
+				len = bis.read(temp);
+			} catch (SocketTimeoutException e) {
+				httpServletResponse.setResponseCode(408);
+				throw new HttpErrorException("发送请求数据超时");
+			}
 			if(len < 4096) {
 				baos.write(temp, 0, len);
 			} else {
@@ -168,63 +186,18 @@ public class HttpHandler implements Runnable {
 		return baos.toByteArray();
 	}
 	
-	private void initServletResponse() {
-		responseHeader = new ResponseHeader(cookie);
-		responseBody = new ResponseBody();
-		httpServletResponse = new HttpServletResponse(responseHeader, responseBody);
-	}
-	
-	private void response(int code, String status, String message) {
-		try {
-			byte[] bodyByte;
-			//响应头
-			if(responseHeader == null) {
-				responseHeader = new ResponseHeader(cookie);
-				responseHeader.setContentType("text/plain");
-			}
-			//响应体
-			if(responseBody == null) {
-				responseBody = new ResponseBody();
-			}
-			if(message != null && !message.isEmpty()) {
-				bodyByte = message.getBytes();
-				responseBody.setBodyByte(bodyByte);
-				responseHeader.setContentLength(bodyByte.length);
-			} else {
-				bodyByte = responseBody.getBodyByte();
-			}
-			//基本信息
-			bos.write(("HTTP/1.1 "+ code +" "+ status +"\r\n").getBytes());
-			//写入响应头
-			bos.write(responseHeader.toString().getBytes("UTF-8"));
-			//写入分割线
-			bos.write(13);
-			bos.write(10);
-			//写入响应体
-			if(bodyByte != null) {
-				bos.write(bodyByte);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				bos.flush();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-	
 	private void getRespData() throws Exception {
 		// 根据路由执行
 		String path =  httpServletRequest.getPath();
 		RouteParams routeParams = Route.getRouteMap().get(path);
 		if(routeParams == null) {
-			throw new NotFoundException(path +" 路由不存在");
+			httpServletResponse.setResponseCode(404);
+			throw new HttpErrorException(path +" 路由不存在");
 		}
 		//请求方法检查
 		if(!routeParams.getRequestMethod().equals(RequestMethod.ALL) && !routeParams.getRequestMethod().toString().equals(httpServletRequest.getRequestMethod())) {
-			throw new ReqMethodNotAllowedException("请求方法不合法");
+			httpServletResponse.setResponseCode(405);
+			throw new HttpErrorException("请求方法不合法");
 		}
 		Class<?> clazz = routeParams.getClazz();
 		Method method = routeParams.getMethod();
@@ -258,6 +231,52 @@ public class HttpHandler implements Runnable {
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 			throw (Exception) e.getCause();
+		}
+		if(httpServletResponse.getResponseCode() == 0) {
+			httpServletResponse.setResponseCode(200);
+		}
+	}
+	
+	private void response(String message) {
+		try {
+			byte[] bodyByte;
+			//响应头
+			if(responseHeader == null) {
+				responseHeader = new ResponseHeader(cookie);
+				responseHeader.setContentType("text/plain");
+			}
+			//响应体
+			if(responseBody == null) {
+				responseBody = new ResponseBody();
+			}
+			if(message != null && !message.isEmpty()) {
+				bodyByte = message.getBytes();
+				responseBody.setBodyByte(bodyByte);
+				responseHeader.setContentLength(bodyByte.length);
+			} else {
+				bodyByte = responseBody.getBodyByte();
+			}
+			//基本信息
+			int code = httpServletResponse.getResponseCode();
+			String status = httpServletResponse.getResponseCodeMsg();
+			bos.write(("HTTP/1.1 "+ code +" "+ status +"\r\n").getBytes());
+			//写入响应头
+			bos.write(responseHeader.toString().getBytes("UTF-8"));
+			//写入分割线
+			bos.write(13);
+			bos.write(10);
+			//写入响应体
+			if(bodyByte != null) {
+				bos.write(bodyByte);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				bos.flush();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
