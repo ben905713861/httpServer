@@ -236,6 +236,10 @@ public class Db {
 		return this;
 	}
 	
+	public String sql() {
+		return "SELECT "+ field_sql +" FROM "+ table + join_sql + where_sql + groupBy_sql + having_sql + orderBy_sql + limit_sql;
+	}
+	
 	public List<Map<String, Object>> select() throws SQLException {
 		String sql = "SELECT "+ field_sql +" FROM "+ table + join_sql + where_sql + groupBy_sql + having_sql + orderBy_sql + limit_sql;
 		return query(sql, bindList);

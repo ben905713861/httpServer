@@ -1,14 +1,28 @@
 package com.wuxb.httpServer.util;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class Tools {
 	
 	public static int time() {
 		long tiemStamp = (new Date().getTime())/1000;
 		return (int) tiemStamp;
+	}
+	
+	public static int dateStr2time(String dateStr) {
+		try {
+			long time = new SimpleDateFormat("yyyy-MM-dd").parse(dateStr).getTime()/1000;
+			return (int) time;
+		} catch (ParseException e) {
+			e.printStackTrace();
+			return 0;
+		}
 	}
 	
 	public static String array2String(String glue, String[] strings) {
@@ -30,6 +44,19 @@ public class Tools {
 			res.add(object);
 		}
 		return res.toArray();
+	}
+	
+	public static Map<String, Object> returnErr(String msg) {
+		Map<String, Object> res = new HashMap<String, Object>();
+		res.put("status", false);
+		res.put("msg", msg);
+		return res;
+	}
+	
+	public static Map<String, Object> returnSucc() {
+		Map<String, Object> res = new HashMap<String, Object>();
+		res.put("status", true);
+		return res;
 	}
 	
 }

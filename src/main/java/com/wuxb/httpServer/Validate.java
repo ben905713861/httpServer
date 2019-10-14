@@ -181,11 +181,16 @@ public abstract class Validate {
 	}
 	
 	private boolean integer(Object data, String nill) {
-		if(!(data instanceof Long || data instanceof Integer || data instanceof Short || data instanceof Byte)) {
-			errMessage = "必须是整数类型";
-			return false;
+		if(data instanceof Long || data instanceof Integer || data instanceof Short || data instanceof Byte) {
+			return true;
 		}
-		return true;
+		else if(data instanceof String) {
+			if(Pattern.matches("^0|([1-9]{1}[0-9]{0,})$", (String) data)) {
+				return true;
+			}
+		}
+		errMessage = "必须是整数类型";
+		return false;
 	}
 	
 	private boolean number(Object data, String nill) {
@@ -202,6 +207,24 @@ public abstract class Validate {
 			}
 		}
 		errMessage = "必须是数字类型";
+		return false;
+	}
+	
+	private boolean bool(Object data, String nill) {
+		if(data instanceof Boolean) {
+			return true;
+		}
+		else if(data instanceof Long || data instanceof Integer || data instanceof Short || data instanceof Byte) {
+			if(data.equals(0) || data.equals(1)) {
+				return true;
+			}
+		}
+		else if(data instanceof String) {
+			if(data.equals("0") || data.equals("1")) {
+				return true;
+			}
+		}
+		errMessage = "必须是布尔类型0或1";
 		return false;
 	}
 	
