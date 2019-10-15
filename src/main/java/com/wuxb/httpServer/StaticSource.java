@@ -3,8 +3,9 @@ package com.wuxb.httpServer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.GZIPOutputStream;
 
 import com.wuxb.httpServer.exception.HttpErrorException;
@@ -15,14 +16,16 @@ import com.wuxb.httpServer.util.Encrypt;
 public class StaticSource {
 
 	private static final String PRXFIX_PATH;//静态资源指定路由前缀,相对/resources/的存放路径
-	private static final int CACHE_TIME;//静态资源指定路由前缀,相对/resources/的存放路径
-	private String path;
-	private RequestHeader requestHeader;
-	private HttpServletResponse httpServletResponse;
-	private ResponseHeader responseHeader;
-	private ResponseBody responseBody;
-	private static Map<String, SourceInfo> routeMap = new Hashtable<String, StaticSource.SourceInfo>();
-	private SourceInfo sourceInfo;
+	protected static final int CACHE_TIME;//静态资源指定路由前缀,相对/resources/的存放路径
+	protected static final int MAX_CACHE_LEN = 20;//最大缓存文件数量
+	protected static final long MAX_CACHE_FILE_SIZE = 100000;//单文件允许加入缓存的最大字节数 128MB
+	protected String path;
+	protected RequestHeader requestHeader;
+	protected HttpServletResponse httpServletResponse;
+	protected ResponseHeader responseHeader;
+	protected ResponseBody responseBody;
+	protected static Map<String, SourceInfo> routeMap = new LinkedHashMap<String, StaticSource.SourceInfo>();
+	protected SourceInfo sourceInfo;
 	
 	static {
 		String path = Config.get("http.staticSource.path");
@@ -39,7 +42,7 @@ public class StaticSource {
 		}
 	}
 	
-	private class SourceInfo {
+	protected class SourceInfo {
 		public String etag;
 		public boolean useGzip;
 		public byte[] bodyByte;
@@ -59,17 +62,17 @@ public class StaticSource {
 		}
 		//扩展名
 		String extName = path.substring(path.lastIndexOf(".") + 1);
-		//ContentType
-		setContentType(extName);
 		//body
 		setRespBody(extName);
+		//ContentType
+		setContentType(extName);
 		//浏览器缓存
 		responseHeader.set("Cache-Control", "max-age="+ CACHE_TIME);
 		httpServletResponse.setResponseCode(200);
 		throw new HttpInterceptInterrupt();
 	}
 	
-	private void setContentType(String extName) {
+	protected void setContentType(String extName) {
 		//contentType判断
 		String contentType;
 		switch(extName) {
@@ -104,15 +107,25 @@ public class StaticSource {
 		responseHeader.setContentType(contentType);
 	}
 	
-	private void setRespBody(String extName) throws IOException, HttpErrorException, HttpInterceptInterrupt {
+	protected InputStream getInputStream() throws IOException {
+		return ClassLoader.getSystemResourceAsStream(path.substring(1));
+	}
+	
+	protected void setRespBody(String extName) throws IOException, HttpErrorException, HttpInterceptInterrupt {
+		//检测到服务器有缓存
 		if(routeMap.containsKey(path)) {
 			useCache();
 			return;
 		}
-		InputStream is = ClassLoader.getSystemResourceAsStream(path.substring(1));
+		InputStream is = getInputStream();
 		if(is == null) {
 			httpServletResponse.setResponseCode(404);
-			throw new HttpErrorException(path +"，资源不存在");
+			throw new HttpErrorException(path +"资源不存在");
+		}
+		//特大文件不做缓存，且使用分段输出
+		if(is.available() > MAX_CACHE_FILE_SIZE) {
+			responseBody.setInputStream(is);
+			return;
 		}
 		sourceInfo = new SourceInfo();
 		byte[] bodyByte = is.readAllBytes();
@@ -140,10 +153,18 @@ public class StaticSource {
 		//etag文件指纹返回
 		sourceInfo.etag = Encrypt.md5(bodyByte);
 		responseHeader.set("ETag", sourceInfo.etag);
-		routeMap.put(path, sourceInfo);
+		//更新并维持链表长度
+		synchronized(StaticSource.class) {
+			routeMap.put(path, sourceInfo);
+			Set<String> keySet = routeMap.keySet();
+			if(keySet.size() > MAX_CACHE_LEN) {
+				String firstKey = keySet.iterator().next();
+				routeMap.remove(firstKey);
+			}
+		}
 	}
 	
-	private void useCache() throws HttpInterceptInterrupt {
+	protected void useCache() throws HttpInterceptInterrupt {
 		sourceInfo = routeMap.get(path);
 		//使用304响应
 		String cacheControl = (String) requestHeader.get("Cache-Control");
@@ -168,21 +189,21 @@ public class StaticSource {
 		responseBody.setBodyByte(sourceInfo.bodyByte);
 	}
 	
-	private void gzipOutput(byte[] bodyByte) throws IOException {
+	protected void gzipOutput(byte[] bodyByte) throws IOException {
 		responseHeader.set("Content-Encoding", "gzip");
 		responseHeader.set("Vary", "Accept-Encoding");
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		GZIPOutputStream gzipOutputStream = new GZIPOutputStream(baos);
 		gzipOutputStream.write(bodyByte);
 		gzipOutputStream.finish();
-		byte[] respByte = baos.toByteArray();
+		byte[] respByte = baos.toByteArray();//压缩后的字节流
 		gzipOutputStream.close();
 		responseBody.setBodyByte(respByte);
 		sourceInfo.useGzip = true;
 		sourceInfo.bodyByte = respByte;
 	}
 	
-	private void defaultOutput(byte[] bodyByte) {
+	protected void defaultOutput(byte[] bodyByte) {
 		responseHeader.setContentLength(bodyByte.length);
 		responseBody.setBodyByte(bodyByte);
 		sourceInfo.useGzip = false;

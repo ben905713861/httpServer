@@ -16,8 +16,8 @@ public class Config {
 		try {
 			value = resourceBundle.getString(key);
 		} catch (MissingResourceException e) {
-			System.err.println("配置项 "+ key +" 不存在");
-			e.printStackTrace();
+//			System.err.println("配置项 "+ key +" 不存在");
+//			e.printStackTrace();
 		}
 		return value;
 	}

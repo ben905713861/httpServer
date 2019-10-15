@@ -4,7 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.Socket;
@@ -25,6 +25,7 @@ public class HttpHandler implements Runnable {
 	
 	private static final int HTTP_TIMEOUT;
 	private static final int MAX_BODY_SIZE;
+	private static final boolean USE_SESSION;
 	private Socket client;
 	private BufferedInputStream bis;
 	private HttpServletRequest httpServletRequest;
@@ -49,6 +50,12 @@ public class HttpHandler implements Runnable {
 			MAX_BODY_SIZE = 10485760;
 		} else {
 			MAX_BODY_SIZE = Integer.parseInt(size);
+		}
+		String useSession = Config.get("http.session.useSession");
+		if(useSession == null || useSession.isEmpty() || useSession.equals("true")) {
+			USE_SESSION = true;
+		} else {
+			USE_SESSION = false;
 		}
 	}
 	
@@ -105,7 +112,9 @@ public class HttpHandler implements Runnable {
 		//请求头中的cookie
 		cookie = new Cookie(requestHeader.getCookieStr());
 		//session
-		session = new Session(cookie);
+		if(USE_SESSION) {
+			session = new Session(cookie);
+		}
 		//响应头
 		responseHeader = new ResponseHeader(cookie);
 		//响应体
@@ -240,15 +249,15 @@ public class HttpHandler implements Runnable {
 	private void response(String message) {
 		try {
 			byte[] bodyByte;
-			//响应头
-			if(responseHeader == null) {
-				responseHeader = new ResponseHeader(cookie);
-				responseHeader.setContentType("text/plain");
-			}
-			//响应体
-			if(responseBody == null) {
-				responseBody = new ResponseBody();
-			}
+//			//响应头
+//			if(responseHeader == null) {
+//				responseHeader = new ResponseHeader(cookie);
+//				responseHeader.setContentType("text/plain");
+//			}
+//			//响应体
+//			if(responseBody == null) {
+//				responseBody = new ResponseBody();
+//			}
 			if(message != null && !message.isEmpty()) {
 				bodyByte = message.getBytes();
 				responseBody.setBodyByte(bodyByte);
@@ -265,7 +274,16 @@ public class HttpHandler implements Runnable {
 			//写入分割线
 			bos.write(13);
 			bos.write(10);
-			//写入响应体
+			//写入响应体，有is流的优先用is流
+			InputStream bodyInputStream = responseBody.getInputStream();
+			if(bodyInputStream != null) {
+				byte[] tempBytes = new byte[4096];
+				int len;
+				while((len = bodyInputStream.read(tempBytes)) != -1) {
+					bos.write(tempBytes, 0, len);
+				}
+				return;
+			}
 			if(bodyByte != null) {
 				bos.write(bodyByte);
 			}
