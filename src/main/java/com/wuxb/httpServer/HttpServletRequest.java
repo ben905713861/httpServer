@@ -15,8 +15,9 @@ public class HttpServletRequest {
 	private Cookie cookie;
 	private Session session;
 	private RequestBody requestBody;
+	private String ip;
 	
-	public HttpServletRequest(String baseInfoStr, RequestHeader requestHeader, RequestBody requestBody, Cookie cookie, Session session) {
+	public HttpServletRequest(String baseInfoStr, RequestHeader requestHeader, RequestBody requestBody, Cookie cookie, Session session, String ip) {
 		//基本信息
 		String[] baseInfo = baseInfoStr.split(" ");
 		requestMethod = baseInfo[0].toUpperCase();
@@ -35,6 +36,7 @@ public class HttpServletRequest {
 		this.cookie = cookie;
 		this.session = session;
 		this.requestBody = requestBody;
+		this.ip = ip;
 	}
 	
 	public String getRequestMethod() {
@@ -72,6 +74,10 @@ public class HttpServletRequest {
 	public Session getSession() {
 		return session;
 	}
-	
+
+	public String getIp() {
+		return ip;
+	}
+
 }
 

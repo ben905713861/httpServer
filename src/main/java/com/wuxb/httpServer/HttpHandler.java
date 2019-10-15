@@ -130,7 +130,7 @@ public class HttpHandler implements Runnable {
 		byte[] bodyBytes = readBody(bodySize);
 		requestBody = new RequestBody(requestHeader.getContentType(), bodyBytes);
 		//servletReq请求对象
-		httpServletRequest = new HttpServletRequest(baseInfoStr, requestHeader, requestBody, cookie, session);
+		httpServletRequest = new HttpServletRequest(baseInfoStr, requestHeader, requestBody, cookie, session, client.getInetAddress().getHostAddress());
 	}
 	
 	private String readHeader() throws RequestFailedException {
