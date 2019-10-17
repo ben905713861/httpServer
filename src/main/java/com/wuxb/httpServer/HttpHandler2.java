@@ -21,9 +21,8 @@ import com.wuxb.httpServer.params.RouteParams;
 import com.wuxb.httpServer.util.Config;
 import com.wuxb.httpServer.util.HttpContextHolder;
 
-public class HttpHandler implements Runnable {
+public class HttpHandler2 {
 	
-	private static final int HTTP_TIMEOUT;
 	private static final int MAX_BODY_SIZE;
 	private static final boolean USE_SESSION;
 	private Socket client;
@@ -39,12 +38,6 @@ public class HttpHandler implements Runnable {
 	private ResponseBody responseBody;
 	
 	static {
-		String timeout = Config.get("http.timeout");
-		if(timeout == null || timeout.isEmpty()) {
-			HTTP_TIMEOUT = 5000;
-		} else {
-			HTTP_TIMEOUT = Integer.parseInt(timeout);
-		}
 		String size = Config.get("http.maxBodySize");
 		if(size == null || size.isEmpty()) {
 			MAX_BODY_SIZE = 10485760;
@@ -59,20 +52,13 @@ public class HttpHandler implements Runnable {
 		}
 	}
 	
-	public HttpHandler(Socket client) {
-		try {
-			bis = new BufferedInputStream(client.getInputStream());
-			bos = new BufferedOutputStream(client.getOutputStream());
-			client.setKeepAlive(true);
-			client.setSoTimeout(HTTP_TIMEOUT);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public HttpHandler2(Socket client, BufferedInputStream bis, BufferedOutputStream bos) {
+		this.bis = bis;
+		this.bos = bos;
 		this.client = client;
 	}
 	
-	@Override
-	public void run() {
+	public boolean run() {
 		try {
 			initServlet();
 			//记录到static方法内，方便当前线程从其他地方获取
@@ -93,13 +79,17 @@ public class HttpHandler implements Runnable {
 		} catch (RequestFailedException e) {
 			//http请求 接收数据过程致命错误
 			e.printStackTrace();
+		} catch (SocketTimeoutException e) {
+			//达到维持tcp连接的最大等待时长,则关闭tcp连接
+			close();
+			System.out.println("tcp连接关闭");
+			return false;
 		} catch(Exception e) {
 			httpServletResponse.setResponseCode(500);
 			response(e.getMessage());
 			e.printStackTrace();
-		} finally {
-			close();
 		}
+		return true;
 	}
 	
 	private void initServlet() throws HttpErrorException, IOException, RequestFailedException  {
@@ -133,7 +123,7 @@ public class HttpHandler implements Runnable {
 		httpServletRequest = new HttpServletRequest(baseInfoStr, requestHeader, requestBody, cookie, session, client.getInetAddress().getHostAddress());
 	}
 	
-	private String readHeader() throws RequestFailedException {
+	private String readHeader() throws RequestFailedException, SocketTimeoutException {
 		ByteArrayOutputStream tempOutputStream = new ByteArrayOutputStream();
 		//获取header
 		int[] checkTemp = new int[4];
@@ -142,7 +132,7 @@ public class HttpHandler implements Runnable {
 			try {
 				byteTemp = bis.read();
 			} catch (SocketTimeoutException e) {
-				throw new RequestFailedException("致命错误！接收请求头数据超时");
+				throw new SocketTimeoutException(e.getMessage());
 			} catch (IOException e) {
 				throw new RequestFailedException("致命错误！IOException："+ e.getMessage());
 			}
@@ -151,6 +141,7 @@ public class HttpHandler implements Runnable {
 			checkTemp[2] = checkTemp[3];
 			checkTemp[3] = byteTemp;
 			//写入临时数组
+			System.out.println(byteTemp);
 			tempOutputStream.write(byteTemp);
 			//判断header结束位置
 			if(checkTemp[0] == 13 && checkTemp[1] == 10 && checkTemp[2] == 13 && checkTemp[3] == 10) {
