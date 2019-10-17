@@ -16,14 +16,14 @@ import com.wuxb.httpServer.annotation.PostParam;
 import com.wuxb.httpServer.exception.HttpErrorException;
 import com.wuxb.httpServer.exception.HttpInterceptInterrupt;
 import com.wuxb.httpServer.exception.RequestFailedException;
+import com.wuxb.httpServer.exception.TCPClientClose;
 import com.wuxb.httpServer.params.RequestMethod;
 import com.wuxb.httpServer.params.RouteParams;
 import com.wuxb.httpServer.util.Config;
 import com.wuxb.httpServer.util.HttpContextHolder;
 
-public class HttpHandler implements Runnable {
+public class HttpHandler {
 	
-	private static final int HTTP_TIMEOUT;
 	private static final int MAX_BODY_SIZE;
 	private static final boolean USE_SESSION;
 	private Socket client;
@@ -39,12 +39,6 @@ public class HttpHandler implements Runnable {
 	private ResponseBody responseBody;
 	
 	static {
-		String timeout = Config.get("http.timeout");
-		if(timeout == null || timeout.isEmpty()) {
-			HTTP_TIMEOUT = 5000;
-		} else {
-			HTTP_TIMEOUT = Integer.parseInt(timeout);
-		}
 		String size = Config.get("http.maxBodySize");
 		if(size == null || size.isEmpty()) {
 			MAX_BODY_SIZE = 10485760;
@@ -59,20 +53,13 @@ public class HttpHandler implements Runnable {
 		}
 	}
 	
-	public HttpHandler(Socket client) {
-		try {
-			bis = new BufferedInputStream(client.getInputStream());
-			bos = new BufferedOutputStream(client.getOutputStream());
-			client.setKeepAlive(true);
-			client.setSoTimeout(HTTP_TIMEOUT);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public HttpHandler(Socket client, BufferedInputStream bis, BufferedOutputStream bos) {
+		this.bis = bis;
+		this.bos = bos;
 		this.client = client;
 	}
 	
-	@Override
-	public void run() {
+	public boolean action() {
 		try {
 			initServlet();
 			//记录到static方法内，方便当前线程从其他地方获取
@@ -82,10 +69,20 @@ public class HttpHandler implements Runnable {
 			//获取控制器的返回数据
 			getRespData();
 			response(null);
+			//判断是否为持久连接
+			String connection = (String) requestHeader.get("Connection");
+			if(httpServletRequest.getHttpVersion().equals("http/1.0")) {
+				if(connection == null || connection.equals("close")) {
+					throw new TCPClientClose();
+				}
+			} else {
+				if(connection != null && connection.equals("close")) {
+					throw new TCPClientClose();
+				}
+			}
 		} catch (HttpInterceptInterrupt e) {
 			//拦截器中断
 			response(e.getMessage());
-//			System.out.println(e.getMessage());
 		} catch (HttpErrorException e) {
 			//http本框架内错误
 			response(e.getMessage());
@@ -93,16 +90,19 @@ public class HttpHandler implements Runnable {
 		} catch (RequestFailedException e) {
 			//http请求 接收数据过程致命错误
 			e.printStackTrace();
+		} catch (TCPClientClose e) {
+			//达到维持tcp连接的最大等待时长,则关闭tcp连接
+			close();
+			return false;
 		} catch(Exception e) {
 			httpServletResponse.setResponseCode(500);
 			response(e.getMessage());
 			e.printStackTrace();
-		} finally {
-			close();
 		}
+		return true;
 	}
 	
-	private void initServlet() throws HttpErrorException, IOException, RequestFailedException  {
+	private void initServlet() throws HttpErrorException, IOException, RequestFailedException, TCPClientClose  {
 		//请求头源码
 		String headerStr = readHeader();
 		int rowOneIndex = headerStr.indexOf("\r\n");//请求头第一行位置
@@ -133,7 +133,7 @@ public class HttpHandler implements Runnable {
 		httpServletRequest = new HttpServletRequest(baseInfoStr, requestHeader, requestBody, cookie, session, client.getInetAddress().getHostAddress());
 	}
 	
-	private String readHeader() throws RequestFailedException {
+	private String readHeader() throws RequestFailedException, TCPClientClose {
 		ByteArrayOutputStream tempOutputStream = new ByteArrayOutputStream();
 		//获取header
 		int[] checkTemp = new int[4];
@@ -142,9 +142,14 @@ public class HttpHandler implements Runnable {
 			try {
 				byteTemp = bis.read();
 			} catch (SocketTimeoutException e) {
-				throw new RequestFailedException("致命错误！接收请求头数据超时");
+				System.out.println("服务器因超时关闭了套接字");
+				throw new TCPClientClose();
 			} catch (IOException e) {
 				throw new RequestFailedException("致命错误！IOException："+ e.getMessage());
+			}
+			if(byteTemp == -1) {
+				System.out.println("客户端关闭了套接字");
+				throw new TCPClientClose();
 			}
 			checkTemp[0] = checkTemp[1];
 			checkTemp[1] = checkTemp[2];

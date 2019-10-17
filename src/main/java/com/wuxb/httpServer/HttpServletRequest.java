@@ -6,6 +6,7 @@ import com.wuxb.httpServer.util.HttpUrlParams;
 
 public class HttpServletRequest {
 
+	private String httpVersion;
 	private String requestMethod;
 	private String url;
 	private String path;
@@ -32,6 +33,7 @@ public class HttpServletRequest {
 				queryParams = HttpUrlParams.urldecode(queryString);
 			}
 		}
+		httpVersion = baseInfo[2];
 		this.requestHeader = requestHeader;
 		this.cookie = cookie;
 		this.session = session;
@@ -77,6 +79,10 @@ public class HttpServletRequest {
 
 	public String getIp() {
 		return ip;
+	}
+
+	public String getHttpVersion() {
+		return httpVersion;
 	}
 
 }
