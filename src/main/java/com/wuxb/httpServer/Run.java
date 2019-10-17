@@ -18,6 +18,7 @@ System.out.println(Route.getRouteMap().keySet());
 			ServerSocket server = new ServerSocket(port);
 			while(true) {
 				Socket client = server.accept();//阻塞
+				System.out.println("新的连接加入");
 				new Thread(new HttpHandler(client)).start();
 			}
 		} catch (Exception e) {

@@ -1,61 +1,55 @@
 package com.wuxb.httpServer;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RequestHeader {
 
-	private String cookie;
-	private String contenttype;
-	private long contentlength = 0;
-	private String host;
-	private Map<String, Object> otherHeaderMap = new HashMap<String, Object>();
+	private Map<String, Object> headerMap = new HashMap<String, Object>();
 	
 	public RequestHeader(String headerStr) {
 		headerStr = headerStr.trim();
 		String[] keyValueArray = headerStr.split("\r\n");
 		for(String keyValue : keyValueArray) {
 			String[] temp = keyValue.split(":");
-			String key = temp[0].trim();
-			String _key = key.replace("-", "").toLowerCase();
+			String key = temp[0].trim().toLowerCase();
 			String value = temp[1].trim();
-			if(key.equals("otherHeaderMap") || _key.equals("otherHdeaderMap")) {
-				continue;
-			}
 			//是整数数字
 			boolean is_number = value.matches("^0|(\\-?[1-9]{1}[0-9]*)$");
-			//赋值
-			try {
-				Field field = this.getClass().getDeclaredField(_key);
-				field.setAccessible(true);
-				field.set(this, is_number ? Long.parseLong(value) : value);
-			} catch(NoSuchFieldException e) {
-				otherHeaderMap.put(key, is_number ? Long.parseLong(value) : value);
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			}
+			headerMap.put(key, is_number ? Long.parseLong(value) : value);
 		}
 	}
 	
 	public String getCookieStr() {
-		return cookie;
+		return (String) headerMap.get("cookie");
 	}
 
 	public String getContentType() {
-		return contenttype;
+		return (String) headerMap.get("content-type");
 	}
 
 	public long getContentLength() {
-		return contentlength;
+		if(headerMap.containsKey("content-length")) {
+			return (long) headerMap.get("content-length");
+		} else {
+			return 0;
+		}
 	}
 
 	public String getHost() {
-		return host;
+		return (String) headerMap.get("host");
 	}
 	
 	public Object get(String key) {
-		return otherHeaderMap.get(key);
+		return headerMap.get(key);
+	}
+	
+	public String getStringValue(String key) {
+		return (String) headerMap.get(key);
+	}
+	
+	public long getIntValue(String key) {
+		return (long) headerMap.get(key);
 	}
 	
 }

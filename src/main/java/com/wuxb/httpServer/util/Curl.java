@@ -28,7 +28,7 @@ public class Curl {
 	private String respBody = "";
 	
 	public static void main(String[] args) {
-		System.out.println(simpleGet("https://wuxb.club:8266/"));
+		System.out.println(simpleGet("https://www.baidu.com/"));
 	}
 	
 	public static String simpleGet(String url) {
@@ -38,12 +38,11 @@ public class Curl {
 	}
 	
 	public Curl(String url) {
-		headers.put("Connection", "Close");
 		setUrl(url);
 	}
 	
 	public Curl() {
-		headers.put("Connection", "Close");
+		
 	}
 	
 	public void setMethod(String method) {
@@ -75,6 +74,7 @@ public class Curl {
 		}
 		//header
 		headers.put("Host", host);
+		headers.put("Connection", "Close");
 	}
 	
 	public void setContentType(String contentType) {

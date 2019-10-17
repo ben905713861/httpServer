@@ -7,10 +7,8 @@ import java.util.Map.Entry;
 
 public class ResponseHeader {
 
-	private String contenttype;
-	private long contentlength = 0;
 	private Cookie cookie;
-	private Map<String, Object> otherHeaderMap = new HashMap<String, Object>();
+	private Map<String, Object> headerMap = new HashMap<String, Object>();
 
 	public ResponseHeader(Cookie cookie) {
 		this.cookie = cookie;
@@ -20,38 +18,41 @@ public class ResponseHeader {
 		return cookie;
 	}
 	
-	public void setContentType(String contenttype) {
-		if(this.contenttype == null) {
-			this.contenttype = contenttype;
+	public void setContentType(String value) {
+		Object contentType = headerMap.get("Content-Type");
+		if(contentType == null || contentType.equals("")) {
+			headerMap.put("Content-Type", value);
 		}
 	}
 	
 	public String getContentType() {
-		return contenttype;
+		return (String) headerMap.get("Content-Type");
 	}
 
-	public void setContentLength(long contentlength) {
-		this.contentlength = contentlength;
+	public void setContentLength(long value) {
+		headerMap.put("Content-Length", value);
 	}
 	
 	public void set(String key, Object value) {
-		otherHeaderMap.put(key, value);
+		headerMap.put(key, value);
 	}
 	
 	@Override
 	public String toString() {
-		String headerString = "";
-		headerString += "Content-Type: "+ (contenttype==null ? "text/plain;charset=utf-8" : contenttype ) + "\r\n";
-		if(contentlength > 0) {
-			headerString += "Content-Length: "+ contentlength + "\r\n";
+		if(!headerMap.containsKey("Content-Type")) {
+			headerMap.put("Content-Type", "text/plain; charset=utf-8");
 		}
+		if(!headerMap.containsKey("Connection")) {
+			headerMap.put("Connection", "keep-alive");
+		}
+		String headerString = "";
 		if(cookie != null) {
 			List<String> setCookieList = cookie.getRespCookies();
 			for(String setCookieStr : setCookieList) {
 				headerString += "Set-Cookie: "+ setCookieStr + "\r\n";
 			}
 		}
-		for(Entry<String, Object> entry : otherHeaderMap.entrySet()) {
+		for(Entry<String, Object> entry : headerMap.entrySet()) {
 			String key = entry.getKey();
 			Object value = entry.getValue();
 			try {
