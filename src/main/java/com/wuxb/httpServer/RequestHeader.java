@@ -41,7 +41,7 @@ public class RequestHeader {
 	}
 	
 	public Object get(String key) {
-		return headerMap.get(key);
+		return headerMap.get(key.toLowerCase());
 	}
 	
 	public String getStringValue(String key) {

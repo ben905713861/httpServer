@@ -27,7 +27,6 @@ public class HttpKeepAlive implements Runnable {
 		try {
 			bis = new BufferedInputStream(client.getInputStream());
 			bos = new BufferedOutputStream(client.getOutputStream());
-//			client.setKeepAlive(true);
 			client.setSoTimeout(HTTP_TIMEOUT);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -38,7 +37,6 @@ public class HttpKeepAlive implements Runnable {
 	@Override
 	public void run() {
 		while(true) {
-			System.out.println("即将开始http请求");
 			if(!new HttpHandler(client, bis, bos).action()) {
 				break;
 			}

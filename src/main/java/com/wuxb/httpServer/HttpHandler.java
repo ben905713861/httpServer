@@ -72,15 +72,17 @@ public class HttpHandler {
 			//记录到static方法内，方便当前线程从其他地方获取
 			HttpContextHolder.set(httpServletRequest, httpServletResponse);
 			//拦截器
-			InterceptLoader.run(httpServletRequest, httpServletResponse);
-			//获取控制器的返回数据
-			getRespData();
-			response(null);
+			try {
+				InterceptLoader.run(httpServletRequest, httpServletResponse);
+				//获取控制器的返回数据
+				getRespData();
+				response(null);
+			} catch (HttpInterceptInterrupt e) {
+				//拦截器中断，直接执行响应
+				response(e.getMessage());
+			}
 			//判断是否为持久连接
 			checkKeepAlive();
-		} catch (HttpInterceptInterrupt e) {
-			//拦截器中断
-			response(e.getMessage());
 		} catch (HttpErrorException e) {
 			//http本框架内错误
 			response(e.getMessage());
@@ -117,6 +119,10 @@ public class HttpHandler {
 		}
 		//响应头
 		responseHeader = new ResponseHeader(cookie);
+		Object connection = requestHeader.get("Connection");
+		if(connection != null) {
+			responseHeader.set("Connection", connection);
+		}
 		//响应体
 		responseBody = new ResponseBody();
 		//servletResp响应对象
@@ -257,15 +263,6 @@ public class HttpHandler {
 	private void response(String message) {
 		try {
 			byte[] bodyByte;
-//			//响应头
-//			if(responseHeader == null) {
-//				responseHeader = new ResponseHeader(cookie);
-//				responseHeader.setContentType("text/plain");
-//			}
-//			//响应体
-//			if(responseBody == null) {
-//				responseBody = new ResponseBody();
-//			}
 			if(message != null && !message.isEmpty()) {
 				bodyByte = message.getBytes();
 				responseBody.setBodyByte(bodyByte);
@@ -310,11 +307,11 @@ public class HttpHandler {
 	private void checkKeepAlive() throws TCPClientClose  {
 		String connection = (String) requestHeader.get("Connection");
 		if(httpServletRequest.getHttpVersion().equals("http/1.0")) {
-			if(connection == null || connection.equals("close")) {
+			if(connection == null || connection.toLowerCase().equals("close")) {
 				throw new TCPClientClose();
 			}
 		} else {
-			if(connection != null && connection.equals("close")) {
+			if(connection != null && connection.toLowerCase().equals("close")) {
 				throw new TCPClientClose();
 			}
 		}
@@ -333,7 +330,6 @@ public class HttpHandler {
 		}
 		try {
 			client.close();
-			System.out.println("物理关闭client");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

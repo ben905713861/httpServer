@@ -28,7 +28,7 @@ public class Curl {
 	private String respBody = "";
 	
 	public static void main(String[] args) {
-		System.out.println(simpleGet("https://www.baidu.com/"));
+		System.out.println(simpleGet("http://127.0.0.1:8083/index.txt"));
 	}
 	
 	public static String simpleGet(String url) {
@@ -73,8 +73,8 @@ public class Curl {
 			uri = "/";
 		}
 		//header
-		headers.put("Host", host);
-		headers.put("Connection", "Close");
+		headers.put("Host", host +":"+ port);
+		headers.put("Connection", "close");
 	}
 	
 	public void setContentType(String contentType) {
