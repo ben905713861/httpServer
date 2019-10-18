@@ -27,7 +27,7 @@ public class HttpKeepAlive implements Runnable {
 		try {
 			bis = new BufferedInputStream(client.getInputStream());
 			bos = new BufferedOutputStream(client.getOutputStream());
-			client.setKeepAlive(true);
+//			client.setKeepAlive(true);
 			client.setSoTimeout(HTTP_TIMEOUT);
 		} catch (IOException e) {
 			e.printStackTrace();

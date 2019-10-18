@@ -24,7 +24,8 @@ import com.wuxb.httpServer.util.HttpContextHolder;
 
 public class HttpHandler {
 	
-	private static final int MAX_BODY_SIZE;
+	private static final int MAX_HEADER_SIZE;
+	private static final long MAX_BODY_SIZE;
 	private static final boolean USE_SESSION;
 	private Socket client;
 	private BufferedInputStream bis;
@@ -39,11 +40,17 @@ public class HttpHandler {
 	private ResponseBody responseBody;
 	
 	static {
-		String size = Config.get("http.maxBodySize");
-		if(size == null || size.isEmpty()) {
+		String maxHeaderSize = Config.get("http.maxHeaderSize");
+		if(maxHeaderSize == null || maxHeaderSize.isEmpty()) {
+			MAX_HEADER_SIZE = 10240;
+		} else {
+			MAX_HEADER_SIZE = Integer.parseInt(maxHeaderSize);
+		}
+		String maxBodysize = Config.get("http.maxBodySize");
+		if(maxBodysize == null || maxBodysize.isEmpty()) {
 			MAX_BODY_SIZE = 10485760;
 		} else {
-			MAX_BODY_SIZE = Integer.parseInt(size);
+			MAX_BODY_SIZE = Long.parseLong(maxBodysize);
 		}
 		String useSession = Config.get("http.session.useSession");
 		if(useSession == null || useSession.isEmpty() || useSession.equals("true")) {
@@ -70,16 +77,7 @@ public class HttpHandler {
 			getRespData();
 			response(null);
 			//判断是否为持久连接
-			String connection = (String) requestHeader.get("Connection");
-			if(httpServletRequest.getHttpVersion().equals("http/1.0")) {
-				if(connection == null || connection.equals("close")) {
-					throw new TCPClientClose();
-				}
-			} else {
-				if(connection != null && connection.equals("close")) {
-					throw new TCPClientClose();
-				}
-			}
+			checkKeepAlive();
 		} catch (HttpInterceptInterrupt e) {
 			//拦截器中断
 			response(e.getMessage());
@@ -90,6 +88,8 @@ public class HttpHandler {
 		} catch (RequestFailedException e) {
 			//http请求 接收数据过程致命错误
 			e.printStackTrace();
+			close();
+			return false;
 		} catch (TCPClientClose e) {
 			//达到维持tcp连接的最大等待时长,则关闭tcp连接
 			close();
@@ -157,6 +157,9 @@ public class HttpHandler {
 			checkTemp[3] = byteTemp;
 			//写入临时数组
 			tempOutputStream.write(byteTemp);
+			if(tempOutputStream.size() > MAX_HEADER_SIZE) {
+				throw new RequestFailedException("致命错误！请求头信息量过大，服务器拒绝继续请求");
+			}
 			//判断header结束位置
 			if(checkTemp[0] == 13 && checkTemp[1] == 10 && checkTemp[2] == 13 && checkTemp[3] == 10) {
 				break;
@@ -303,6 +306,20 @@ public class HttpHandler {
 		}
 	}
 	
+	//判断是否为持久连接
+	private void checkKeepAlive() throws TCPClientClose  {
+		String connection = (String) requestHeader.get("Connection");
+		if(httpServletRequest.getHttpVersion().equals("http/1.0")) {
+			if(connection == null || connection.equals("close")) {
+				throw new TCPClientClose();
+			}
+		} else {
+			if(connection != null && connection.equals("close")) {
+				throw new TCPClientClose();
+			}
+		}
+	}
+	
 	private void close() {
 		try {
 			if(bos != null) bos.close();
@@ -316,6 +333,7 @@ public class HttpHandler {
 		}
 		try {
 			client.close();
+			System.out.println("物理关闭client");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
