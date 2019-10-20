@@ -7,7 +7,7 @@ import java.util.Map;
 
 import com.alibaba.fastjson.JSONObject;
 import com.wuxb.httpServer.params.FileInfo;
-import com.wuxb.httpServer.util.FormdataParams;
+import com.wuxb.httpServer.util.FormdataParamsDecode;
 import com.wuxb.httpServer.util.HttpUrlParams;
 
 
@@ -31,7 +31,7 @@ public class RequestBody {
 		else if(contentType.indexOf("multipart/form-data") != -1) {
 			bodyMap = new HashMap<String, Object>();
 			fileList = new ArrayList<FileInfo>();
-			FormdataParams.getInstance(bodyMap, fileList).decode(contentType, bodyBytes);
+			FormdataParamsDecode.getInstance(bodyMap, fileList).decode(contentType, bodyBytes);
 		}
 		else {
 			bodyMap = null;

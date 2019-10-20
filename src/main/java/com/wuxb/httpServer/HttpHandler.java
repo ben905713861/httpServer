@@ -306,7 +306,7 @@ public class HttpHandler {
 	//判断是否为持久连接
 	private void checkKeepAlive() throws TCPClientClose  {
 		String connection = (String) requestHeader.get("Connection");
-		if(httpServletRequest.getHttpVersion().equals("http/1.0")) {
+		if(httpServletRequest.getHttpVersion().toUpperCase().equals("HTTP/1.0")) {
 			if(connection == null || connection.toLowerCase().equals("close")) {
 				throw new TCPClientClose();
 			}

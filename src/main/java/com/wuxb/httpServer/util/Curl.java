@@ -87,7 +87,7 @@ public class Curl {
 	
 	public void setBodyStr(String bodyStr) {
 		try {
-			bodyByte = bodyStr.getBytes("UTF-8");
+			setBodyByte(bodyStr.getBytes("UTF-8"));
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
@@ -95,6 +95,7 @@ public class Curl {
 	
 	public void setBodyByte(byte[] bodyByte) {
 		this.bodyByte = bodyByte;
+		headers.put("Content-Length", bodyByte.length+"");
 	}
 	
 	public void send() {

@@ -123,7 +123,9 @@ public class StaticSource {
 			throw new HttpErrorException(path +"资源不存在");
 		}
 		//特大文件不做缓存，且使用分段输出
-		if(is.available() > MAX_CACHE_FILE_SIZE) {
+		long contentLength = is.available();
+		if(contentLength > MAX_CACHE_FILE_SIZE) {
+			responseHeader.setContentLength(contentLength);
 			responseBody.setInputStream(is);
 			return;
 		}
@@ -182,9 +184,8 @@ public class StaticSource {
 		if(sourceInfo.useGzip) {
 			responseHeader.set("Content-Encoding", "gzip");
 			responseHeader.set("Vary", "Accept-Encoding");
-		} else {
-			responseHeader.setContentLength(sourceInfo.bodyByte.length);
 		}
+		responseHeader.setContentLength(sourceInfo.bodyByte.length);
 		responseHeader.set("ETag", sourceInfo.etag);
 		responseBody.setBodyByte(sourceInfo.bodyByte);
 	}
@@ -198,6 +199,7 @@ public class StaticSource {
 		gzipOutputStream.finish();
 		byte[] respByte = baos.toByteArray();//压缩后的字节流
 		gzipOutputStream.close();
+		responseHeader.setContentLength(respByte.length);
 		responseBody.setBodyByte(respByte);
 		sourceInfo.useGzip = true;
 		sourceInfo.bodyByte = respByte;
