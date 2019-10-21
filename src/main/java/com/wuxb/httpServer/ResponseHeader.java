@@ -39,11 +39,14 @@ public class ResponseHeader {
 	
 	@Override
 	public String toString() {
-		if(!headerMap.containsKey("Content-Type")) {
-			headerMap.put("Content-Type", "text/plain; charset=utf-8");
-		}
+//		if(!headerMap.containsKey("Content-Type")) {
+//			headerMap.put("Content-Type", "text/plain; charset=utf-8");
+//		}
 		if(!headerMap.containsKey("Connection")) {
 			headerMap.put("Connection", "keep-alive");
+		}
+		if(!headerMap.containsKey("Content-Length")) {
+			headerMap.put("Content-Length", 0);
 		}
 		String headerString = "";
 		if(cookie != null) {

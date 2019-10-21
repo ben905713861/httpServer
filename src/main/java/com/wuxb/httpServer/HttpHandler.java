@@ -266,6 +266,7 @@ public class HttpHandler {
 			if(message != null && !message.isEmpty()) {
 				bodyByte = message.getBytes();
 				responseBody.setBodyByte(bodyByte);
+				responseHeader.setContentType("text/plain; charset=utf-8");
 				responseHeader.setContentLength(bodyByte.length);
 			} else {
 				bodyByte = responseBody.getBodyByte();
