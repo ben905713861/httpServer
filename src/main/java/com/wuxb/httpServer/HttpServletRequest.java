@@ -30,8 +30,10 @@ public class HttpServletRequest {
 			path = urlTemp[0];
 			if(urlTemp.length  > 1) {
 				queryString = urlTemp[1];
-				queryParams = HttpUrlParams.urldecode(queryString);
+			} else {
+				queryString = "";
 			}
+			queryParams = HttpUrlParams.urldecode(queryString);
 		}
 		httpVersion = baseInfo[2];
 		this.requestHeader = requestHeader;
