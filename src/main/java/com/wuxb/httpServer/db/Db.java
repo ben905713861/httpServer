@@ -356,6 +356,18 @@ public class Db {
 		return execute(sql, bindList);
 	}
 	
+	public int setInc(String field, int num) throws SQLException {
+		String sql = "UPDATE "+ table +" SET "+ field +"="+ field +"+?" + where_sql + limit_sql;
+		bindList.add(0, num);
+		return execute(sql, bindList);
+	}
+	
+	public int setDec(String field, int num) throws SQLException {
+		String sql = "UPDATE "+ table +" SET "+ field +"="+ field +"-?" + where_sql + limit_sql;
+		bindList.add(0, num);
+		return execute(sql, bindList);
+	}
+	
 	public int delete() throws SQLException {
 		String sql = "DELETE FROM "+ table + where_sql + limit_sql;
 		return execute(sql, bindList);
