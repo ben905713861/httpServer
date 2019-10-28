@@ -13,7 +13,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.wuxb.httpServer.Cache;
 import com.wuxb.httpServer.db.ConnectionPool;
+import com.wuxb.httpServer.util.Encrypt;
 import com.wuxb.httpServer.util.Tools;
 
 public class Db {
@@ -26,6 +30,7 @@ public class Db {
 	private String having_sql = "";
 	private String orderBy_sql = "";
 	private String limit_sql = "";
+	private int cacheTime = -1;
 	private List<Object> bindList = new LinkedList<Object>();
 	
 	private Db(String table) {
@@ -236,13 +241,35 @@ public class Db {
 		return this;
 	}
 	
+	public Db cache(int cacheTime) {
+		this.cacheTime = cacheTime;
+		return this;
+	}
+	
 	public String sql() {
 		return "SELECT "+ field_sql +" FROM "+ table + join_sql + where_sql + groupBy_sql + having_sql + orderBy_sql + limit_sql;
 	}
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public List<Map<String, Object>> select() throws SQLException {
 		String sql = "SELECT "+ field_sql +" FROM "+ table + join_sql + where_sql + groupBy_sql + having_sql + orderBy_sql + limit_sql;
-		return query(sql, bindList);
+		List<Map<String, Object>> resList;
+		if(cacheTime == -1) {
+			resList = query(sql, bindList);
+			return resList;
+		}
+		//使用缓存
+		String dataStr = new JSONArray(bindList).toString();
+		String cacheKey = Encrypt.md5(sql +"@"+ dataStr);
+		String json = Cache.get(cacheKey);
+		if(json == null || json.isEmpty()) {
+			resList = query(sql, bindList);
+			Cache.set(cacheKey, new JSONArray((List) resList).toString());
+			return resList;
+		}
+		Object temp = JSONArray.parseArray(json, Map.class);
+		resList =(List<Map<String, Object>>) temp;
+		return resList;
 	}
 	
 	public Map<String, Object> find() throws SQLException {
