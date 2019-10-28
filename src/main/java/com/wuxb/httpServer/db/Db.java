@@ -264,7 +264,7 @@ public class Db {
 		String json = Cache.get(cacheKey);
 		if(json == null || json.isEmpty()) {
 			resList = query(sql, bindList);
-			Cache.set(cacheKey, new JSONArray((List) resList).toString());
+			Cache.set(cacheKey, new JSONArray((List) resList).toString(), cacheTime);
 			return resList;
 		}
 		Object temp = JSONArray.parseArray(json, Map.class);
@@ -274,11 +274,24 @@ public class Db {
 	
 	public Map<String, Object> find() throws SQLException {
 		String sql = "SELECT "+ field_sql +" FROM "+ table + join_sql + where_sql + groupBy_sql + having_sql + orderBy_sql + " LIMIT 1";
-		List<Map<String, Object>> list = query(sql, bindList);
-		if(list.size() == 0) {
-			return null;
+		Map<String, Object> resMap;
+		if(cacheTime == -1) {
+			List<Map<String, Object>> list = query(sql, bindList);
+			resMap = list.size() == 0 ? null : list.get(0);
+			return resMap;
 		}
-		return list.get(0);
+		//使用缓存
+		String dataStr = new JSONArray(bindList).toString();
+		String cacheKey = Encrypt.md5(sql +"@"+ dataStr);
+		String json = Cache.get(cacheKey);
+		if(json == null || json.isEmpty()) {
+			List<Map<String, Object>> list = query(sql, bindList);
+			resMap = list.size() == 0 ? null : list.get(0);
+			Cache.set(cacheKey, new JSONObject(resMap).toString(), cacheTime);
+			return resMap;
+		}
+		resMap = JSONObject.parseObject(json);
+		return resMap;
 	}
 	
 	public List<Object> column(String field) throws SQLException {
