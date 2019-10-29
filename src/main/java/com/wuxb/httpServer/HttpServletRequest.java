@@ -6,6 +6,7 @@ import com.wuxb.httpServer.util.HttpUrlParams;
 
 public class HttpServletRequest {
 
+	private static final int PROXY_LEN = 1;//服务端已知反向代理层数
 	private String httpVersion;
 	private String requestMethod;
 	private String url;
@@ -40,7 +41,14 @@ public class HttpServletRequest {
 		this.cookie = cookie;
 		this.session = session;
 		this.requestBody = requestBody;
-		this.ip = ip;
+		//客户端ip
+		String xForwardFor = (String) requestHeader.get("X-Forwarded-For");
+		if(xForwardFor == null || xForwardFor.isEmpty()) {
+			this.ip = ip;
+		} else {
+			String[] ips = xForwardFor.split(",");
+			this.ip = ips[ips.length - PROXY_LEN].trim();
+		}
 	}
 	
 	public String getRequestMethod() {
