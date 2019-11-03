@@ -325,7 +325,11 @@ public class Db {
 	
 	public int count() throws SQLException {
 		Object count = value("COUNT(*) count");
-		return ((Long) count).intValue();
+		if(count instanceof Long) {
+			return ((Long) count).intValue();
+		} else {
+			return (Integer) count;
+		}
 	}
 	
 	public int insert(Map<String, Object> data) throws SQLException {
