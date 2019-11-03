@@ -218,9 +218,16 @@ public class HttpHandler {
 			throw new HttpErrorException(path +" 路由不存在");
 		}
 		//请求方法检查
-		if(!routeParams.getRequestMethod().equals(RequestMethod.ALL) && !routeParams.getRequestMethod().toString().equals(httpServletRequest.getRequestMethod())) {
-			httpServletResponse.setResponseCode(405);
-			throw new HttpErrorException("请求方法不合法");
+		if(httpServletRequest.getRequestMethod().equals("OPTIONS")) {
+			httpServletResponse.setResponseCode(200);
+			throw new HttpInterceptInterrupt();
+		}
+		String allowMethod = routeParams.getRequestMethod().toString();
+		if(!allowMethod.equals("ALL")) {
+			if(!httpServletRequest.getRequestMethod().equals("OPTIONS") && !httpServletRequest.getRequestMethod().equals(allowMethod)) {
+				httpServletResponse.setResponseCode(405);
+				throw new HttpErrorException("请求方法不合法");
+			}
 		}
 		Class<?> clazz = routeParams.getClazz();
 		Method method = routeParams.getMethod();
