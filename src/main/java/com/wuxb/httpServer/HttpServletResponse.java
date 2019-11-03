@@ -79,7 +79,8 @@ public class HttpServletResponse {
 		String msg;
 		switch(responseCode) {
 			case 200: msg = "OK"; break;
-			case 302: msg = "Moved Temporarily"; break;
+			case 301: msg = "Moved Temporarily"; break;
+			case 302: msg = "Found"; break;
 			case 304: msg = "Not Modified"; break;
 			case 401: msg = "Unauthorized"; break;
 			case 403: msg = "Forbidden"; break;
@@ -98,7 +99,7 @@ public class HttpServletResponse {
 	//重定向
 	public void location(String url) {
 		responseHeader.set("location", url);
-		setResponseCode(302);
+		setResponseCode(301);
 	}
 	
 }
