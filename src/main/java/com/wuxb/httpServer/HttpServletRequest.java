@@ -26,6 +26,7 @@ public class HttpServletRequest {
 		url = baseInfo[1];
 		if(url.indexOf("?") == -1) {
 			path = url;
+			queryString = "";
 		} else {
 			String[] urlTemp = url.split("\\?");
 			path = urlTemp[0];
@@ -34,8 +35,8 @@ public class HttpServletRequest {
 			} else {
 				queryString = "";
 			}
-			queryParams = HttpUrlParams.urldecode(queryString);
 		}
+		queryParams = HttpUrlParams.urldecode(queryString);
 		httpVersion = baseInfo[2];
 		this.requestHeader = requestHeader;
 		this.cookie = cookie;
