@@ -48,10 +48,10 @@ public class Tools {
 	
 	public static long ip2long(String ip) {
 		String[] temp = ip.split("\\.");
-		byte a0 = Byte.parseByte(temp[0]);
-		byte a1 = Byte.parseByte(temp[1]);
-		byte a2 = Byte.parseByte(temp[2]);
-		byte a3 = Byte.parseByte(temp[3]);
+		int a0 = Integer.parseInt(temp[0]);
+		int a1 = Integer.parseInt(temp[1]);
+		int a2 = Integer.parseInt(temp[2]);
+		int a3 = Integer.parseInt(temp[3]);
 		long res = a3 + a2*256 + a1*65536 + a0*16777216;
 		return res;
 	}
