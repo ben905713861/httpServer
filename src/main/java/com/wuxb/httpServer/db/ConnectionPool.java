@@ -29,6 +29,7 @@ public class ConnectionPool {
 			for(int i = 0; i < MIN_CONN_NUM; i++) {
 				connections.add(createConnection());
 			}
+			keepConnection();
 		} catch (ClassNotFoundException e1) {
 			e1.printStackTrace();
 		} catch (SQLException e1) {
@@ -43,6 +44,26 @@ public class ConnectionPool {
 	//创建连接
 	private static Connection createConnection() throws SQLException {
 		return DriverManager.getConnection(url, username, password);
+	}
+	
+	//心跳轮询来保持连接
+	private static void keepConnection() {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				while(true) {
+					try {
+						//每2小时轮询一次
+						Thread.sleep(2*3600 *1000);
+						for(Connection connection : connections) {
+							connection.prepareStatement("SELECT 1").executeQuery();
+						}
+					} catch(Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}).start();
 	}
 	
 	//输出连接
