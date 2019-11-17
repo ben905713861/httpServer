@@ -11,9 +11,9 @@ public class RequestHeader {
 		headerStr = headerStr.trim();
 		String[] keyValueArray = headerStr.split("\r\n");
 		for(String keyValue : keyValueArray) {
-			String[] temp = keyValue.split(":");
-			String key = temp[0].trim().toLowerCase();
-			String value = temp[1].trim();
+			int boundary = keyValue.indexOf(':');
+			String key = keyValue.substring(0, boundary).toLowerCase();
+			String value = keyValue.substring(boundary+1).trim();
 			//是整数数字
 			boolean is_number = value.matches("^0|(\\-?[1-9]{1}[0-9]*)$");
 			headerMap.put(key, is_number ? Long.parseLong(value) : value);
