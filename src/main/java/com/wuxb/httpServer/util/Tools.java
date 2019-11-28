@@ -52,7 +52,7 @@ public class Tools {
 		int a1 = Integer.parseInt(temp[1]);
 		int a2 = Integer.parseInt(temp[2]);
 		int a3 = Integer.parseInt(temp[3]);
-		long res = a3 + a2*256 + a1*65536 + a0*16777216;
+		long res = a3 + a2*256 + a1*65536l + a0*16777216l;
 		return res;
 	}
 	
