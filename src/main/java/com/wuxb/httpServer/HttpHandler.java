@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Date;
 import java.util.Map;
 
 import com.wuxb.httpServer.annotation.GetParam;
@@ -17,7 +18,6 @@ import com.wuxb.httpServer.exception.HttpErrorException;
 import com.wuxb.httpServer.exception.HttpInterceptInterrupt;
 import com.wuxb.httpServer.exception.RequestFailedException;
 import com.wuxb.httpServer.exception.TCPClientClose;
-import com.wuxb.httpServer.params.RequestMethod;
 import com.wuxb.httpServer.params.RouteParams;
 import com.wuxb.httpServer.util.Config;
 import com.wuxb.httpServer.util.HttpContextHolder;
@@ -148,13 +148,11 @@ public class HttpHandler {
 			try {
 				byteTemp = bis.read();
 			} catch (SocketTimeoutException e) {
-				System.out.println("服务器因超时关闭了套接字");
 				throw new TCPClientClose();
 			} catch (IOException e) {
 				throw new RequestFailedException("致命错误！IOException："+ e.getMessage());
 			}
 			if(byteTemp == -1) {
-				System.out.println("客户端关闭了套接字");
 				throw new TCPClientClose();
 			}
 			checkTemp[0] = checkTemp[1];
@@ -253,12 +251,16 @@ public class HttpHandler {
 				paramsObjects[i] = null;
 			}
 		}
+		
+		//执行路由方法，获得响应结果
 		try {
 			Object bodyObject = method.invoke(clazz.getDeclaredConstructor().newInstance(), paramsObjects);
 			if(bodyObject != null) {
 				httpServletResponse.setResponse(bodyObject);
 			}
 		} catch (IllegalArgumentException e) {
+			System.out.println("###### "+ new Date() +" ######");
+			System.out.println("IP:"+ httpServletRequest.getIp());
 			e.printStackTrace();
 			throw (Exception) e.getCause();
 		}

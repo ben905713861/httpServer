@@ -41,8 +41,9 @@ public class Session {
 		if(sessionId == null || sessionId.isEmpty()) {
 			sessionId = createSessionId();
 			Attributes attributes = cookie.getAttributesObj();
-			attributes.httpOnly = true;
-			attributes.sameSite = "Strict";
+				attributes.maxAge = SESSION_AGE;
+				attributes.httpOnly = true;
+				attributes.sameSite = "Strict";
 			cookie.set(COOKIE_NAME, sessionId, attributes);
 		}
 		//获取数据并反序列化
