@@ -131,6 +131,7 @@ public class StaticSource {
 		}
 		sourceInfo = new SourceInfo();
 		byte[] bodyByte = is.readAllBytes();
+		is.close();
 		switch(extName) {
 			case "html":
 			case "htm":

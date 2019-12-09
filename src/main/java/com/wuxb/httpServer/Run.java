@@ -41,7 +41,6 @@ public class Run {
 			}
 			while(true) {
 				Socket client = server.accept();//阻塞
-				System.out.println("新的连接加入");
 				new Thread(new HttpKeepAlive(client)).start();
 			}
 		} catch (Exception e) {
