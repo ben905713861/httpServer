@@ -314,6 +314,9 @@ public class Db {
 	public Object value(String field) throws SQLException {
 		field(field);
 		Map<String, Object> row = find();
+		if(row == null) {
+			return null;
+		}
 		if(field.lastIndexOf(" ") != -1) {
 			field = field.substring(field.lastIndexOf(" ") + 1);
 		}
