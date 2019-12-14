@@ -57,7 +57,7 @@ public class Run {
 		System.out.println("===>>> SERVER USE HTTPS");
 		char keyStorePass[] = SSL_KEY_PASSWORD.toCharArray(); // 证书密码
 		KeyStore ks = KeyStore.getInstance("JKS"); // 创建JKS密钥库
-		ks.load(new FileInputStream(SSL_KEY_PATH), keyStorePass);
+		ks.load(ClassLoader.getSystemResourceAsStream(SSL_KEY_PATH), keyStorePass);
 		// 创建管理JKS密钥库的X.509密钥管理器
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 		kmf.init(ks, keyStorePass);
