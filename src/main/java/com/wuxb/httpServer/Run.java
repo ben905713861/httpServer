@@ -61,7 +61,7 @@ public class Run {
 		// 创建管理JKS密钥库的X.509密钥管理器
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 		kmf.init(ks, keyStorePass);
-		SSLContext sslContext = SSLContext.getInstance("SSLv3");
+		SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
 		sslContext.init(kmf.getKeyManagers(), null, null);
 		SSLServerSocket server = (SSLServerSocket) sslContext.getServerSocketFactory().createServerSocket(PORT);
 		return server;
