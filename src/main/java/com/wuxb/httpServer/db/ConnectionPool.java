@@ -53,13 +53,26 @@ public class ConnectionPool {
 			public void run() {
 				while(true) {
 					try {
-						//每2小时轮询一次
-						Thread.sleep(2*3600 *1000);
-						for(Connection connection : connections) {
-							connection.prepareStatement("SELECT 1").executeQuery();
-						}
+						//每20秒轮询一次，每次检查一个连接
+						Thread.sleep(3000);
 					} catch(Exception e) {
 						e.printStackTrace();
+						continue;
+					}
+					
+					Connection connection = null;
+					try {
+						connection = getConnection();
+						connection.prepareStatement("SELECT 1").executeQuery();
+						releaseConnection();
+					} catch (SQLException e) {
+						try {
+							if(connection != null) {
+								connection.close();
+							}
+						} catch (SQLException e1) {
+							e1.printStackTrace();
+						}
 					}
 				}
 			}
