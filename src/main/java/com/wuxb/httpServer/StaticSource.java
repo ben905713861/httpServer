@@ -16,9 +16,9 @@ import com.wuxb.httpServer.util.Encrypt;
 public class StaticSource {
 
 	private static final String PRXFIX_PATH;//静态资源指定路由前缀,相对/resources/的存放路径
-	protected static final int CACHE_TIME;//静态资源指定路由前缀,相对/resources/的存放路径
-	protected static final int MAX_CACHE_LEN = 20;//最大缓存文件数量
-	protected static final long MAX_CACHE_FILE_SIZE = 100000;//单文件允许加入缓存的最大字节数 128MB
+	protected static final int CACHE_TIME;//静态资源在浏览器的缓存时间
+	protected static final int MAX_CACHE_LEN = 100;//最大缓存文件数量
+	protected static final long MAX_CACHE_FILE_SIZE = 1000000;//单文件允许加入缓存的最大字节数 1MB
 	protected String path;
 	protected RequestHeader requestHeader;
 	protected HttpServletResponse httpServletResponse;
@@ -139,6 +139,7 @@ public class StaticSource {
 			case "js":
 			case "txt":
 			case "json":
+			case "xml":
 			case "pdf":
 			case "doc":
 			case "docx":
