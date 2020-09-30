@@ -7,13 +7,13 @@ import com.wuxb.httpServer.StaticSource;
 
 public class MyInterceptor implements Interceptor {
 
-	private HttpServletRequest httpServletRequest;
-	private HttpServletResponse httpServletResponse;
+//	private HttpServletRequest httpServletRequest;
+//	private HttpServletResponse httpServletResponse;
 	
 	@Override
 	public void run(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse)  throws Exception {
-		this.httpServletRequest = httpServletRequest;
-		this.httpServletResponse = httpServletResponse;
+//		this.httpServletRequest = httpServletRequest;
+//		this.httpServletResponse = httpServletResponse;
 		//静态资源处理
 		new StaticSource(httpServletRequest, httpServletResponse).action();
 //		checkLogin();
